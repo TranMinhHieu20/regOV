@@ -4,6 +4,61 @@ import ddddocr
 import random
 import os
 
+async def smart_click(locator, timeout=3000):
+    """
+    Hàm click linh hoạt cho Hidemium (Desktop + Mobile profile):
+    Ưu tiên: click() → tap() → JS TouchEvent + click.
+    """
+    # Chiến lược 1: Click thường (tốt nhất cho Desktop profile)
+    try:
+        await locator.click(timeout=timeout)
+        return
+    except:
+        pass
+    # Chiến lược 2: Tap (tốt nhất cho Mobile profile)
+    try:
+        await locator.tap(timeout=timeout)
+        return
+    except:
+        pass
+    # Chiến lược 3: Ép bằng JS — fire đầy đủ chuỗi touch + click
+    try:
+        await locator.evaluate("""node => {
+            node.dispatchEvent(new TouchEvent('touchstart', {bubbles: true}));
+            node.dispatchEvent(new TouchEvent('touchend', {bubbles: true}));
+            node.click();
+        }""")
+    except Exception as e:
+        print(f"⚠️ Lỗi smart_click (hết chiến lược): {e}")
+
+
+async def smart_tap(locator, timeout=3000):
+    """
+    Hàm tap linh hoạt cho Hidemium (ưu tiên Touch cho bàn phím ảo, ô nhập...):
+    Ưu tiên: tap() → click() → JS TouchEvent + click.
+    """
+    # Chiến lược 1: Tap (ưu tiên cho mobile / bàn phím ảo)
+    try:
+        await locator.tap(timeout=timeout)
+        return
+    except:
+        pass
+    # Chiến lược 2: Click thường
+    try:
+        await locator.click(timeout=timeout)
+        return
+    except:
+        pass
+    # Chiến lược 3: Ép bằng JS
+    try:
+        await locator.evaluate("""node => {
+            node.dispatchEvent(new TouchEvent('touchstart', {bubbles: true}));
+            node.dispatchEvent(new TouchEvent('touchend', {bubbles: true}));
+            node.click();
+        }""")
+    except Exception as e:
+        print(f"⚠️ Lỗi smart_tap (hết chiến lược): {e}")
+
 async def bam_nut_dang_ky(page, selector_dang_ky):
     """Hàm chuyên dụng để xử lý việc bấm nút đăng ký an toàn"""
     print(f"🖱️ Đang click Đăng Ký (Tìm bộ chọn đang hiển thị)...")
@@ -14,7 +69,7 @@ async def bam_nut_dang_ky(page, selector_dang_ky):
         nut_dang_ky = page.locator(selector_hien_thi).last
         
         await nut_dang_ky.wait_for(state="visible", timeout=60000)
-        await nut_dang_ky.click(force=True)
+        await smart_click(nut_dang_ky)
         print("✔️ Đã bấm nút ĐĂNG KÝ thành công!")
         
         # CHỜ CHUYỂN CẢNH: Sau khi bấm đăng ký, web cần thời gian phản hồi
@@ -83,7 +138,7 @@ async def don_dep_popup(page, danh_sach_popup):
             try:
                 nut_dong = page.locator(f"{selector}:visible").last
                 await nut_dong.wait_for(state="visible", timeout=2000)
-                await nut_dong.click(force=True)
+                await smart_click(nut_dong)
                 print(f"✔️ BÙM! Đã đóng 1 Popup bằng vũ khí: {selector}")
                 
                 # CHỜ HIỆU ỨNG: Đợi 1.5s để hiệu ứng mờ của popup biến mất hẳn
@@ -107,7 +162,7 @@ async def bam_vao_tab_toi(page, selector_toi):
         
         # Đợi nút hiện ra tối đa 60s
         await nut_toi.wait_for(state="visible", timeout=60000)
-        await nut_toi.click(force=True)
+        await smart_click(nut_toi)
         print("✔️ Đã click tab 'Tôi'!")
         
         # CHỜ CHUYỂN CẢNH: Sang trang cá nhân thường phải load dữ liệu
@@ -130,7 +185,7 @@ async def bam_vao_rut_tien(page, selector_rut_tien):
         
         # Đợi nút hiện ra tối đa 10s
         await nut.wait_for(state="visible", timeout=10000)
-        await nut.click(force=True)
+        await smart_click(nut)
         
         print("✔️ Đã truy cập thành công vào trang Rút Tiền!")
         
@@ -143,78 +198,6 @@ async def bam_vao_rut_tien(page, selector_rut_tien):
     
 # --- TRONG FILE: actions.py ---
 
-# async def cai_dat_mat_khau_rut_tien(page, mat_khau, selector_o_nhap, selector_xac_nhan):
-#     """Hàm xử lý việc nhập mật khẩu rút tiền (Hỗ trợ cả bàn phím ảo và phím thật)"""
-    
-#     # Nếu DB không cấu hình, lấy tạm selector mặc định của bạn
-#     if not selector_o_nhap: selector_o_nhap = '.ui-password-input__security'
-#     if not selector_xac_nhan: selector_xac_nhan = '#bindWithdrawAccountNextClick, text="Xác Nhận"'
-
-#     print(f"🔐 Đang thiết lập mật khẩu rút tiền là: {mat_khau} ...")
-    
-#     try:
-#         pass_boxes = page.locator(selector_o_nhap)
-#         # Chờ đợi ô mật khẩu đầu tiên trồi lên
-#         await pass_boxes.first.wait_for(state="visible", timeout=10000)
-#         count_boxes = await pass_boxes.count()
-        
-#         if count_boxes > 0:
-#             for i in range(count_boxes):
-#                 print(f"   -> Đang nhập ô mật khẩu thứ {i+1}/{count_boxes}...")
-#                 try: 
-#                     await pass_boxes.nth(i).click(force=True)
-#                 except: 
-#                     pass
-                
-#                 # Chờ bàn phím ảo hiện lên
-#                 await asyncio.sleep(1.0) 
-                    
-#                 ban_phim_ao = page.locator('.van-keypad:visible, [class*="keyboard"]:visible, [class*="keypad"]:visible, .number-board:visible').first
-                
-#                 # TRƯỜNG HỢP 1: CÓ BÀN PHÍM ẢO
-#                 if await ban_phim_ao.is_visible(timeout=3000):
-#                     for so in mat_khau:
-#                         phim_so = ban_phim_ao.get_by_text(so, exact=True).first
-#                         await phim_so.wait_for(state="visible", timeout=2000) 
-#                         await phim_so.click(force=True)
-#                         await asyncio.sleep(0.3) # Nghỉ để chống nuốt chữ
-                
-#                 # TRƯỜNG HỢP 2: DÙNG BÀN PHÍM THẬT
-#                 else:
-#                     for so in mat_khau:
-#                         await page.keyboard.press(so)
-#                         await asyncio.sleep(0.3)
-                        
-#                 await asyncio.sleep(0.5) # Nghỉ nhẹ để qua ô thứ 2 (Xác nhận lại MK)
-            
-#             # --- PHẦN BẤM XÁC NHẬN ---
-#             try:
-#                 print("   -> Đang tìm nút Xác Nhận...")
-#                 nut_xacnhan = page.locator(selector_xac_nhan).first
-#                 await nut_xacnhan.wait_for(state="visible", timeout=7000)
-#                 await nut_xacnhan.click(force=True)
-#                 print("   => Đã bấm Xác nhận thành công!")
-                
-#                 await asyncio.sleep(3.0) # Đợi web load xong việc lưu
-#                 return True
-                
-#             except Exception as e:
-#                 print(f"   ⚠️ Cảnh báo: Không bấm được nút Xác Nhận thông thường. Đang dùng ép bằng Javascript... Lỗi: {e}")
-#                 await page.evaluate('''() => {
-#                     let btn = document.querySelector('#bindWithdrawAccountNextClick') || 
-#                               Array.from(document.querySelectorAll('*')).find(el => el.textContent.trim() === 'Xác Nhận');
-#                     if(btn) btn.click();
-#                 }''')
-#                 await asyncio.sleep(3.0)
-#                 return True
-#         else:
-#             print("❌ Không tìm thấy ô nhập mật khẩu rút tiền nào trên màn hình.")
-#             return False
-            
-#     except Exception as e:
-#         print(f"❌ Kẹt ở bước cài mật khẩu rút tiền. Chi tiết: {e}")
-#         return False
-    
 async def cai_dat_mat_khau_rut_tien(page, mat_khau, selector_o_nhap, selector_xac_nhan):
     # Sử dụng class chuẩn từ ảnh F12
     if not selector_o_nhap: 
@@ -232,9 +215,9 @@ async def cai_dat_mat_khau_rut_tien(page, mat_khau, selector_o_nhap, selector_xa
         for i in range(count_boxes):
             print(f"   -> Đang nhập hàng mật khẩu thứ {i+1}...")
             
-            # Sử dụng TAP thay vì CLICK cho iPhone
+            # Dùng smart_tap (ưu tiên tap cho bàn phím ảo)
             target_box = pass_boxes.nth(i)
-            await target_box.tap() 
+            await smart_tap(target_box)
             await asyncio.sleep(0.8) # Đợi bàn phím ảo trồi lên
             
             # Kiểm tra bàn phím ảo
@@ -245,18 +228,18 @@ async def cai_dat_mat_khau_rut_tien(page, mat_khau, selector_o_nhap, selector_xa
                 for so in mat_khau:
                     # Tìm nút số chính xác trong bàn phím ảo
                     nut_so = ban_phim_ao.get_by_text(so, exact=True).first
-                    await nut_so.tap() # Dùng TAP cho phím ảo
+                    await smart_tap(nut_so) # smart_tap cho phím ảo
                     await asyncio.sleep(0.2)
             else:
                 print("   ⌨️ Không thấy bàn phím ảo, dùng phím thật...")
-                await page.keyboard.type(mat_khau, delay=150) # Dùng type thay vì press để mượt hơn
+                await page.keyboard.type(mat_khau, delay=150)
             
             await asyncio.sleep(0.5)
 
         # --- BẤM XÁC NHẬN ---
         print("   -> Bấm nút Xác Nhận...")
         nut_xn = page.locator(selector_xac_nhan).first
-        await nut_xn.tap() # Dùng TAP để chắc chắn ăn lệnh trên Mobile
+        await smart_click(nut_xn)
         
         # Đợi phản hồi từ server (thường có loading hoặc popup)
         await asyncio.sleep(2.0)
@@ -280,7 +263,7 @@ async def bam_vao_them_tai_khoan(page, selector_them_tk):
         
         # Đợi nút hiện ra tối đa 7 giây
         await nut.wait_for(state="visible", timeout=7000)
-        await nut.click(force=True)
+        await smart_click(nut)
         
         print("✔️ Đã bấm 'Thêm Tài Khoản' thành công!")
         
@@ -305,7 +288,7 @@ async def tai_khoan_ngan_hang(page, selector_them_tk):
         
         # Đợi nút hiện ra tối đa 7 giây
         await nut.wait_for(state="visible", timeout=7000)
-        await nut.click(force=True)
+        await smart_click(nut)
         
         print("✔️ Đã bấm 'Thêm Tài khoản ngân hàng' thành công!")
         
@@ -334,9 +317,9 @@ async def xac_minh_mat_khau_truoc_khi_them(page, mat_khau, selector_o_nhap, sele
         pass_boxes = page.locator(selector_o_nhap).first
         await pass_boxes.wait_for(state="visible", timeout=10000)
         
-        # 2. Kích hoạt bàn phím ảo bằng TAP
+        # 2. Kích hoạt bàn phím ảo (smart_tap ưu tiên tap → click → JS)
         print("   -> Đang chạm vào ô nhập để hiện bàn phím...")
-        await pass_boxes.tap()
+        await smart_tap(pass_boxes)
         await asyncio.sleep(1.0) # Đợi bàn phím trồi hẳn lên
 
         # 3. Kiểm tra bàn phím ảo (Sử dụng selector linh hoạt)
@@ -345,9 +328,9 @@ async def xac_minh_mat_khau_truoc_khi_them(page, mat_khau, selector_o_nhap, sele
         if await ban_phim_ao.is_visible(timeout=3000):
             print("   ⌨️ Phát hiện bàn phím ảo, đang bấm từng số...")
             for so in mat_khau:
-                # Tìm nút số trong bàn phím ảo và dùng TAP
+                # Tìm nút số trong bàn phím ảo
                 nut_so = ban_phim_ao.get_by_text(so, exact=True).first
-                await nut_so.tap()
+                await smart_tap(nut_so)
                 await asyncio.sleep(0.3) # Nghỉ ngắn giữa các lần bấm
         else:
             print("   ⌨️ Không thấy bàn phím ảo, sử dụng keyboard.type...")
@@ -362,11 +345,8 @@ async def xac_minh_mat_khau_truoc_khi_them(page, mat_khau, selector_o_nhap, sele
         nut_ok = page.locator(selector_xac_nhan).first
         
         if await nut_ok.is_visible():
-            # Thử tap trước, nếu không được thì dùng JS ép click
-            try:
-                await nut_ok.tap(timeout=2000)
-            except:
-                await nut_ok.evaluate("node => node.click()")
+            # Dùng smart_click tự xử lý fallback
+            await smart_click(nut_ok)
             
             print("✔️ Đã bấm Xác nhận thành công.")
             await asyncio.sleep(2.5) # Đợi form ngân hàng load
@@ -380,108 +360,119 @@ async def xac_minh_mat_khau_truoc_khi_them(page, mat_khau, selector_o_nhap, sele
         return False
 # --- TRONG FILE: actions.py ---
 
-# async def dien_thong_tin_ngan_hang(page, so_tai_khoan, ten_ngan_hang, cfg):
-#     """Hàm điền form ngân hàng sử dụng tính năng Search"""
-    
-#     selector_stk = cfg.get("input_stk", "input[placeholder*='số tài khoản']")
-#     selector_tim_nh = cfg.get("input_tim_ngan_hang", "input[placeholder*='Chọn ngân hàng']")
-#     selector_luu = cfg.get("nut_luu_ngan_hang", "button:has-text('Xác Nhận')")
-
-#     print(f"🏦 Bắt đầu nhập liệu: STK[{so_tai_khoan}] - NH[{ten_ngan_hang}]")
-    
-#     try:
-#         # 1. NHẬP SỐ TÀI KHOẢN
-#         o_stk = page.locator(selector_stk).last
-#         await o_stk.click()
-#         await page.keyboard.type(str(so_tai_khoan), delay=100)
-#         await asyncio.sleep(1)
-
-#         # 2. TÌM VÀ CHỌN NGÂN HÀNG (Cập nhật logic Gõ phím tìm kiếm)
-#         print(f"   -> Đang tìm ngân hàng: {ten_ngan_hang}")
-        
-#         # Click vào ô chọn ngân hàng để con trỏ chuột nhấp nháy ở đó
-#         o_tim = page.locator(selector_tim_nh).last
-#         await o_tim.click()
-#         await asyncio.sleep(0.5)
-
-#         # Gõ tên ngân hàng vào để web tự lọc danh sách
-#         await page.keyboard.type(ten_ngan_hang, delay=100)
-#         await asyncio.sleep(1.5) # Chờ 1.5s để web lọc ra kết quả
-
-#         # Nhắm vào kết quả hiện ra (chính xác tên mình vừa gõ)
-#         item_ngan_hang = page.get_by_text(ten_ngan_hang, exact=True).last
-        
-#         if await item_ngan_hang.is_visible(timeout=3000):
-#             await item_ngan_hang.click()
-#             print(f"   => Đã chọn xong: {ten_ngan_hang}")
-#         else:
-#             print(f"   ⚠️ Lỗi: Không thấy '{ten_ngan_hang}' hiện ra. Hãy kiểm tra lại file txt xem viết đúng tên NH chưa!")
-
-#         # 3. BẤM XÁC NHẬN
-#         print("   -> Đang bấm Xác Nhận lưu...")
-#         await asyncio.sleep(1)
-#         await page.locator(selector_luu).last.click(force=True)
-        
-#         # Đợi 3s xem có thông báo thành công không
-#         await asyncio.sleep(3) 
-#         return True
-
-#     except Exception as e:
-#         print(f"❌ Lỗi điền form Ngân hàng: {e}")
-#         return False
 async def dien_thong_tin_ngan_hang(page, so_tai_khoan, ten_ngan_hang, cfg):
-    """Hàm điền form ngân hàng sử dụng Touch/Tap cho Mobile"""
+    """Hàm điền form ngân hàng — hỗ trợ cả Desktop & Mobile Hidemium"""
     
     selector_stk = cfg.get("input_stk", "input[placeholder*='số tài khoản']")
     selector_tim_nh = cfg.get("input_tim_ngan_hang", "input[placeholder*='Chọn ngân hàng']")
     selector_luu = cfg.get("nut_luu_ngan_hang", "button:has-text('Xác Nhận')")
+    # Selector item ngân hàng trong dropdown — có thể cấu hình từ Cloud
+    selector_item_nh = cfg.get("item_ngan_hang", ".ui-options__option._bankOption_r0ahx_213")
 
-    print(f"🏦 Bắt đầu nhập liệu (Mobile Mode): STK[{so_tai_khoan}] - NH[{ten_ngan_hang}]")
+    print(f"🏦 Bắt đầu nhập liệu: STK[{so_tai_khoan}] - NH[{ten_ngan_hang}]")
     
     try:
-        # 1. NHẬP SỐ TÀI KHOẢN (Dùng tap thay cho click)
+        # 1. NHẬP SỐ TÀI KHOẢN
         o_stk = page.locator(selector_stk).last
-        await o_stk.tap() 
+        await smart_tap(o_stk)
         await asyncio.sleep(0.5)
         await page.keyboard.type(str(so_tai_khoan), delay=100)
 
         # 2. TÌM NGÂN HÀNG
         print(f"   -> Đang chạm vào ô tìm kiếm ngân hàng...")
         o_tim = page.locator(selector_tim_nh).last
-        await o_tim.tap() # Dùng TAP để hiện danh sách
-        await asyncio.sleep(0.8)
+        await smart_tap(o_tim)
+        await asyncio.sleep(1.0)
 
         # Gõ tên ngân hàng để lọc
         await page.keyboard.type(ten_ngan_hang, delay=100)
-        await asyncio.sleep(2.0) # Đợi web load kết quả
+        await asyncio.sleep(3.0) # Đợi web load kết quả (mobile cần lâu hơn)
 
-        # 3. BẤM CHỌN NGÂN HÀNG (SỬ DỤNG TOUCH EVENTS)
-        # Class lấy từ ảnh
-        item_ngan_hang = page.locator(".ui-options__option-content").get_by_text(ten_ngan_hang, exact=True).last
-        
-        if await item_ngan_hang.is_visible(timeout=5000):
-            print(f"   🎯 Đã thấy '{ten_ngan_hang}'. Đang thực hiện TOUCH...")
+        # 3. BẤM CHỌN NGÂN HÀNG — THỬ NHIỀU CHIẾN LƯỢC
+        item_ngan_hang = None
+        da_chon = False
+
+        # Chiến lược 1: Tìm chính xác bằng selector cấu hình + exact text
+        print(f"   🔍 Tìm '{ten_ngan_hang}' bằng selector: {selector_item_nh}")
+        try:
+            loc1 = page.locator(selector_item_nh).get_by_text(ten_ngan_hang, exact=True).last
+            if await loc1.is_visible(timeout=3000):
+                item_ngan_hang = loc1
+                print(f"   ✅ Tìm thấy (exact match)")
+        except:
+            pass
+
+        # Chiến lược 2: Tìm chứa text (không exact) — phòng trường hợp web thêm khoảng trắng
+        if not item_ngan_hang:
+            print(f"   🔍 Thử tìm (contains match)...")
+            try:
+                loc2 = page.locator(selector_item_nh).get_by_text(ten_ngan_hang, exact=False).last
+                if await loc2.is_visible(timeout=3000):
+                    item_ngan_hang = loc2
+                    print(f"   ✅ Tìm thấy (contains match)")
+            except:
+                pass
+
+        # Chiến lược 3: Tìm rộng hơn — bỏ qua selector class, tìm bất kỳ element chứa text
+        if not item_ngan_hang:
+            print(f"   🔍 Thử tìm rộng (any visible element)...")
+            try:
+                loc3 = page.get_by_text(ten_ngan_hang, exact=False).last
+                if await loc3.is_visible(timeout=3000):
+                    item_ngan_hang = loc3
+                    print(f"   ✅ Tìm thấy (broad match)")
+            except:
+                pass
+
+        # Nếu tìm được → scroll vào view rồi click
+        if item_ngan_hang:
+            print(f"   🎯 Đã thấy '{ten_ngan_hang}'. Đang cuộn vào view và chọn...")
+            # Scroll element vào viewport trước (mobile hay bị che)
+            await item_ngan_hang.scroll_into_view_if_needed()
+            await asyncio.sleep(0.5)
+            await smart_click(item_ngan_hang)
             
-            # Cách 1: Dùng Tap của Playwright
-            await item_ngan_hang.tap()
+            # Kiểm tra xem dropdown đã đóng chưa (dấu hiệu chọn thành công)
+            await asyncio.sleep(1.5)
+            try:
+                still_visible = await page.locator(selector_item_nh).first.is_visible(timeout=2000)
+                if still_visible:
+                    # Dropdown vẫn mở → thử tap lại bằng JS
+                    print(f"   ⚠️ Dropdown vẫn mở, thử tap lại bằng JS...")
+                    await item_ngan_hang.evaluate("""node => {
+                        node.dispatchEvent(new PointerEvent('pointerdown', {bubbles: true}));
+                        node.dispatchEvent(new PointerEvent('pointerup', {bubbles: true}));
+                        node.dispatchEvent(new TouchEvent('touchstart', {bubbles: true}));
+                        node.dispatchEvent(new TouchEvent('touchend', {bubbles: true}));
+                        node.click();
+                    }""")
+                    await asyncio.sleep(1.5)
+            except:
+                pass  # Dropdown đã đóng → OK
             
-            # Cách 2: Ép sự kiện Touch bằng Javascript (Dự phòng nếu Tap vẫn trượt)
-            await item_ngan_hang.evaluate("""(node) => {
-                node.dispatchEvent(new TouchEvent('touchstart', {bubbles: true}));
-                node.dispatchEvent(new TouchEvent('touchend', {bubbles: true}));
-                node.click(); // Vẫn gọi click kèm theo cho chắc
-            }""")
-            
+            da_chon = True
             print(f"   => Đã chọn xong: {ten_ngan_hang}")
-            await asyncio.sleep(1)
         else:
-            print("   ⚠️ Không thấy kết quả phù hợp để touch.")
+            print(f"   ❌ Không tìm thấy '{ten_ngan_hang}' trong danh sách!")
+            # Debug: In ra tất cả các option đang hiện
+            try:
+                all_items = page.locator(selector_item_nh)
+                count = await all_items.count()
+                print(f"   📋 Số lượng item hiện tại: {count}")
+                for i in range(min(count, 5)):
+                    txt = await all_items.nth(i).inner_text()
+                    print(f"      [{i}] {txt}")
+            except:
+                pass
+            return False
+
+        if not da_chon:
             return False
 
         # 4. BẤM XÁC NHẬN
         print("   -> Bấm Xác Nhận lưu form...")
         btn_xn = page.locator(selector_luu).last
-        await btn_xn.tap() # Dùng TAP
+        await smart_click(btn_xn)
         
         await asyncio.sleep(3) 
         return True
@@ -489,7 +480,7 @@ async def dien_thong_tin_ngan_hang(page, so_tai_khoan, ten_ngan_hang, cfg):
     except Exception as e:
         print(f"❌ Lỗi điền form Ngân hàng: {e}")
         return False
-    
+     
 
 ocr = ddddocr.DdddOcr(show_ad=False)
 async def xu_ly_captcha(page, cfg):

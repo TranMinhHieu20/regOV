@@ -1,0 +1,9 @@
+playwright
+customtkinter
+pymongo[srv]
+python-dotenv
+psutil
+requests
+ddddocr
+opencv-python
+numpy

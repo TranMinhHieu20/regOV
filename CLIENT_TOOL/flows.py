@@ -2,9 +2,14 @@
 import asyncio
 from CLIENT_TOOL.actions import bam_nut_dang_ky, don_dep_popup, kiem_tra_va_cho_captcha, bam_vao_tab_toi, bam_vao_rut_tien, cai_dat_mat_khau_rut_tien, tai_khoan_ngan_hang, xac_minh_mat_khau_truoc_khi_them, dien_thong_tin_ngan_hang, xu_ly_captcha, giai_captcha_keo_opencv, bam_vao_them_tai_khoan
 
-async def run_full_flow(page, target_url, user_data, cfg):
+async def run_full_flow(page, target_url, user_data, cfg, report_status=None, is_aborted=None):
+    def update_status(msg):
+        if report_status:
+            report_status(msg)
+            
     try:
-
+        if is_aborted and is_aborted(): return
+        update_status(f"Mở trang {target_url}...")
         print(f"🚀 Bắt đầu chạy: {target_url}")
         await page.goto(target_url, timeout=30000)
         await page.wait_for_selector(cfg["input_username"], timeout=15000)
@@ -18,6 +23,8 @@ async def run_full_flow(page, target_url, user_data, cfg):
         # ==========================================
         # 1. NHẬP THÔNG TIN TÀI KHOẢN
         # ==========================================
+        if is_aborted and is_aborted(): return
+        update_status("Đang nhập thông tin Đăng ký...")
         await page.type(cfg["input_username"], user_data["username"])
         await page.type(cfg["input_password"], user_data["password"])
         
@@ -39,6 +46,8 @@ async def run_full_flow(page, target_url, user_data, cfg):
         # ==========================================
         # 2. GỌI HÀM BẤM NÚT ĐĂNG KÝ
         # ==========================================
+        if is_aborted and is_aborted(): return
+        update_status("Chuẩn bị bấm Đăng ký...")
         print("\n--- BẮT ĐẦU QUÁ TRÌNH BẤM ĐĂNG KÝ ---")
         thanh_cong = await bam_nut_dang_ky(page, cfg["nut_dangky"])
         
@@ -50,10 +59,13 @@ async def run_full_flow(page, target_url, user_data, cfg):
         
         # 3.1. Nếu là Captcha kéo (Slide)
         if cfg.get("captcha_slider_btn"):
+            update_status("Đang giải Captcha hình ảnh...")
             max_retries = 3
             da_thanh_cong = False
 
             for i in range(max_retries):
+                if is_aborted and is_aborted(): return
+                update_status(f"Giải Captcha (lần {i+1})...")
                 print(f"🔄 Đang giải Slide Captcha lần {i+1}...")
                 
                 # Gọi hàm giải và nhận kết quả trả về
@@ -75,6 +87,7 @@ async def run_full_flow(page, target_url, user_data, cfg):
 
         # 3.2. Nếu là Captcha chữ/số (OCR) - giữ nguyên
         if cfg.get("input_captcha"):
+            update_status("Phát hiện Captcha. Đang chờ giải...")
             tiep_tuc = await kiem_tra_va_cho_captcha(page) 
             if not tiep_tuc:
                return 
@@ -82,6 +95,8 @@ async def run_full_flow(page, target_url, user_data, cfg):
         # 4. GỌI HÀM QUÉT POPUP
         # ==========================================
         # Sau khi giải captcha xong, web mới hiện Popup thành công hoặc thông báo
+        if is_aborted and is_aborted(): return
+        update_status("Đang dọn dẹp Popup rác...")
         await don_dep_popup(page, cfg.get("nut_dong_popup"))
         await asyncio.sleep(1)
         
@@ -89,6 +104,7 @@ async def run_full_flow(page, target_url, user_data, cfg):
         # ==========================================
         # 5. TỰ ĐỘNG BẤM VÀO TAB "TÔI"
         # ==========================================
+        update_status("Truy cập trang Cá nhân...")
         print("\n--- BƯỚC CUỐI: KIỂM TRA TÀI KHOẢN ---")
         # Truyền cấu hình từ cfg vào hàm
         vao_toi_thanh_cong = await bam_vao_tab_toi(page, cfg.get("nut_toi"))
@@ -99,6 +115,7 @@ async def run_full_flow(page, target_url, user_data, cfg):
         # 6. TỰ ĐỘNG BẤM "RÚT TIỀN" (MỚI THÊM)
         # ==========================================
         if vao_toi_thanh_cong:
+            update_status("Vào mục Rút Tiền...")
             print("\n--- BƯỚC 6: VÀO MỤC RÚT TIỀN ---")
             vao_rut_tien_thanh_cong = await bam_vao_rut_tien(page, cfg.get("nut_rut_tien"))
             # Nghỉ 2s để nhìn thấy form Rút tiền hiện ra
@@ -107,7 +124,9 @@ async def run_full_flow(page, target_url, user_data, cfg):
         # ==========================================
         # 7. CÀI ĐẶT MẬT KHẨU RÚT TIỀN (MỚI)
         # ==========================================
+        if is_aborted and is_aborted(): return
         if vao_rut_tien_thanh_cong:
+            update_status("Cài đặt MK Rút Tiền...")
             print("\n--- BƯỚC 7: CÀI ĐẶT MẬT KHẨU RÚT TIỀN ---")
             cai_dat_mat_khau_thanh_cong = await cai_dat_mat_khau_rut_tien(
                 page, 
@@ -121,6 +140,7 @@ async def run_full_flow(page, target_url, user_data, cfg):
         # 8. BẤM VÀO THÊM TÀI KHOẢN (MỚI)
         # ==========================================
         if cai_dat_mat_khau_thanh_cong:
+            update_status("Mở form thêm thẻ Ngân hàng...")
             print("\n--- BƯỚC 8: THÊM TÀI KHOẢN ---")
             await asyncio.sleep(1)
             da_bam_them = await bam_vao_them_tai_khoan(page, cfg.get("nut_them_tai_khoan"))
@@ -136,7 +156,9 @@ async def run_full_flow(page, target_url, user_data, cfg):
         # ==========================================
         # 10 XÁC MINH MẬT KHẨU (BƯỚC BẠN VỪA NÓI)
         # ==========================================
+        if is_aborted and is_aborted(): return
         if da_chon_loai:
+            update_status("Xác minh MK trước khi thêm thẻ...")
             print("\n--- BƯỚC 10: NHẬP LẠI MẬT KHẨU RÚT TIỀN ---")
             da_xac_minh = await xac_minh_mat_khau_truoc_khi_them(
             page, 
@@ -148,7 +170,9 @@ async def run_full_flow(page, target_url, user_data, cfg):
         # ==========================================
         # 11 XÁC NHẬN TÀI KHOẢN NGÂN HÀNG (BƯỚC BẠN VỪA NÓI)
         # ==========================================
+        if is_aborted and is_aborted(): return
         if da_xac_minh:
+            update_status("Đang nhập STK Ngân Hàng...")
             print("\n--- BƯỚC 11: ĐIỀN FORM NGÂN HÀNG ---")
             thanh_cong = await dien_thong_tin_ngan_hang(
                 page, 

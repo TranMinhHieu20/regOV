@@ -34,6 +34,7 @@ WEB_CONFIG = {
         "nut_xac_nhan_verify": "span:text-is('Tiếp Theo')",
         "input_stk": "input[placeholder*='Vui lòng nhập số tài khoản ngân hàng']", 
         "input_tim_ngan_hang": "input[placeholder*='Chọn ngân hàng phát hành']", # Đổi sang tìm ô Search
+        "item_ngan_hang": ".ui-options__option",
         "nut_luu_ngan_hang": "button:has-text('Xác Nhận')"
     },
     "c168a.vip":{
@@ -64,6 +65,7 @@ WEB_CONFIG = {
         "nut_xac_nhan_verify": "span:text-is('Tiếp Theo')",
         "input_stk": "input[placeholder*='Vui lòng nhập số tài khoản ngân hàng']", 
         "input_tim_ngan_hang": "input[placeholder*='Chọn ngân hàng phát hành']", # Đổi sang tìm ô Search
+        "item_ngan_hang": ".ui-options__option",
         "nut_luu_ngan_hang": "button:has-text('Xác Nhận')"
     },
     "m.sc8888.com":{
@@ -94,6 +96,7 @@ WEB_CONFIG = {
         "nut_xac_nhan_verify": "span:text-is('Tiếp Theo')",
         "input_stk": "input[placeholder*='Vui lòng nhập số tài khoản ngân hàng']", 
         "input_tim_ngan_hang": "input[placeholder*='Chọn ngân hàng phát hành']", # Đổi sang tìm ô Search
+         "item_ngan_hang": ".ui-options__option",
         "nut_luu_ngan_hang": "button:has-text('Xác Nhận')"
     },
     "hi1444.com": {

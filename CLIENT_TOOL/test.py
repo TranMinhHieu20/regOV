@@ -20,12 +20,12 @@ DOMAIN_MAP = {
 
 # DỮ LIỆU ĐẦU VÀO
 MY_DATA = {
-    "username": "hiesCute056",
+    "username": "hiesCute074",
     "password": "password123",
     "pin_bank": "112233",
-    "sdt": "0987654056",
+    "sdt": "0987654084",
     "ten_that": "Tran Thanh Cong",
-    "stk_bank": "809182311032",
+    "stk_bank": "8091823110357",
     "ten_bank": "MB BANK"
 }
 
