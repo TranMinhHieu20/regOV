@@ -10,19 +10,44 @@ from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from pymongo import MongoClient
 
-env_path = os.path.join(os.path.dirname(__file__), '.env')
-load_dotenv(env_path)
-URI = os.getenv("MONGO_URI")
+import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from path_helper import get_data_path
 
-SMTP_HOST = os.getenv("SMTP_HOST", "smtp.gmail.com").strip()
-SMTP_PORT = int(os.getenv("SMTP_PORT", 587))
-SMTP_USER = os.getenv("SMTP_USER", "").strip()
-SMTP_PASS = os.getenv("SMTP_PASS", "").strip()
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+vault = {}
+env_path = get_data_path("SERVER_API", ".env")
+
+if os.path.exists(env_path):
+    # CHẾ ĐỘ DEVELOPER: Ưu tiên dùng file .env nếu có
+    from dotenv import load_dotenv
+    load_dotenv(env_path)
+    vault = {
+        "MONGO_URI": os.getenv("MONGO_URI"),
+        "SMTP_HOST": os.getenv("SMTP_HOST", "smtp.gmail.com"),
+        "SMTP_PORT": int(os.getenv("SMTP_PORT", 587)),
+        "SMTP_USER": os.getenv("SMTP_USER"),
+        "SMTP_PASS": os.getenv("SMTP_PASS")
+    }
+else:
+    # CHẾ ĐỘ PRODUCTION: Dùng vault mã hóa trong code
+    from secret_gate import get_vault
+    vault = get_vault()
+
+URI = vault.get("MONGO_URI")
+SMTP_HOST = vault.get("SMTP_HOST")
+SMTP_PORT = vault.get("SMTP_PORT")
+SMTP_USER = vault.get("SMTP_USER")
+SMTP_PASS = vault.get("SMTP_PASS")
+
 
 def lay_cau_hinh_tu_cloud():
     if not URI:
-        print("❌ Lỗi: Không tìm thấy MONGO_URI trong file .env")
+        print("❌ Lỗi: Không tìm thấy cấu hình kết nối")
         return {}
+
     try:
         client = MongoClient(URI, serverSelectionTimeoutMS=5000)
         db = client["ToolAutoDB"]

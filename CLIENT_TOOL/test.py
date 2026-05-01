@@ -15,7 +15,8 @@ DOMAIN_MAP = {
     "new": "https://m.new8826.xyz/Account/Register",
     "f168": "https://f1686s.com/home/register",
     "c168": "https://c168a.vip/home/register",
-    "sc88": "https://m.sc8888.com/home/register"
+    "sc88": "https://m.sc8888.com/home/register",
+    "f8": "https://m.f8betf.cool/Account/Register",
 }
 
 # DỮ LIỆU ĐẦU VÀO
@@ -30,7 +31,7 @@ MY_DATA = {
 }
 
 # CÁC TRANG MUỐN CHẠY
-cac_web_muon_chay = [ "f168"] 
+cac_web_muon_chay = [ "f8"] 
 
 async def start():
     config_cloud = db.lay_cau_hinh_tu_cloud()

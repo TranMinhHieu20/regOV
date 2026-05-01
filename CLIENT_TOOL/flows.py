@@ -9,6 +9,13 @@ async def run_full_flow(page, target_url, user_data, cfg, report_status=None, is
             
     try:
         if is_aborted and is_aborted(): return
+        
+        # Khởi tạo các biến trạng thái để tránh lỗi "not defined"
+        vao_toi_thanh_cong = False
+        vao_rut_tien_thanh_cong = False
+        cai_dat_mat_khau_thanh_cong = False
+        da_bam_them = False
+        
         update_status(f"Mở trang {target_url}...")
         print(f"🚀 Bắt đầu chạy: {target_url}")
         await page.goto(target_url, timeout=30000)

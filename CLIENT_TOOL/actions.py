@@ -3,61 +3,58 @@ import asyncio
 import ddddocr
 import random
 import os
+import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from path_helper import get_data_path
 
-async def smart_click(locator, timeout=3000):
+async def smart_click(locator, timeout=5000):
     """
-    Hàm click linh hoạt cho Hidemium (Desktop + Mobile profile):
-    Ưu tiên: click() → tap() → JS TouchEvent + click.
+    Hệ thống Click thích ứng: Cực kỳ mạnh mẽ, bắn đa sự kiện để đảm bảo web nhận lệnh.
     """
-    # Chiến lược 1: Click thường (tốt nhất cho Desktop profile)
     try:
-        await locator.click(timeout=timeout)
-        return
-    except:
-        pass
-    # Chiến lược 2: Tap (tốt nhất cho Mobile profile)
-    try:
-        await locator.tap(timeout=timeout)
-        return
-    except:
-        pass
-    # Chiến lược 3: Ép bằng JS — fire đầy đủ chuỗi touch + click
-    try:
+        # 1. Chờ phần tử xuất hiện (giảm timeout xuống 3s để ko bị treo lâu)
+        await locator.wait_for(state="visible", timeout=3000)
+        
+        # 2. Thử cách bấm chuẩn của Playwright (Tap/Click)
+        try:
+            is_touch = await locator.page.evaluate("() => 'ontouchstart' in window")
+            if is_touch:
+                # Dùng tap với timeout ngắn
+                await locator.tap(timeout=2000)
+            else:
+                # Dùng click với timeout ngắn
+                await locator.click(timeout=2000, delay=random.randint(50, 100))
+            return True
+        except:
+            pass # Nếu lỗi thì chuyển sang ép bằng JS ngay
+
+        # 3. CHIẾN LƯỢC ÉP LỆNH: Bắn toàn bộ chuỗi sự kiện (Touch + Mouse + Click)
         await locator.evaluate("""node => {
-            node.dispatchEvent(new TouchEvent('touchstart', {bubbles: true}));
-            node.dispatchEvent(new TouchEvent('touchend', {bubbles: true}));
+            const opts = {bubbles: true, cancelable: true, view: window};
+            
+            // Bắn chuỗi Touch (cho Mobile)
+            node.dispatchEvent(new TouchEvent('touchstart', opts));
+            node.dispatchEvent(new TouchEvent('touchend', opts));
+            
+            // Bắn chuỗi Mouse (cho Desktop)
+            node.dispatchEvent(new MouseEvent('mousedown', opts));
+            node.dispatchEvent(new MouseEvent('mouseup', opts));
+            
+            // Bấm thật sự
             node.click();
+            if (node.parentElement && node.parentElement.click) node.parentElement.click();
         }""")
+        return True
+        
     except Exception as e:
-        print(f"⚠️ Lỗi smart_click (hết chiến lược): {e}")
+        print(f"⚠️ Lỗi bấm: {e}")
+        return False
 
 
-async def smart_tap(locator, timeout=3000):
-    """
-    Hàm tap linh hoạt cho Hidemium (ưu tiên Touch cho bàn phím ảo, ô nhập...):
-    Ưu tiên: tap() → click() → JS TouchEvent + click.
-    """
-    # Chiến lược 1: Tap (ưu tiên cho mobile / bàn phím ảo)
-    try:
-        await locator.tap(timeout=timeout)
-        return
-    except:
-        pass
-    # Chiến lược 2: Click thường
-    try:
-        await locator.click(timeout=timeout)
-        return
-    except:
-        pass
-    # Chiến lược 3: Ép bằng JS
-    try:
-        await locator.evaluate("""node => {
-            node.dispatchEvent(new TouchEvent('touchstart', {bubbles: true}));
-            node.dispatchEvent(new TouchEvent('touchend', {bubbles: true}));
-            node.click();
-        }""")
-    except Exception as e:
-        print(f"⚠️ Lỗi smart_tap (hết chiến lược): {e}")
+async def smart_tap(locator, timeout=5000):
+    """Alias cho smart_click để đảm bảo tính nhất quán toàn hệ thống"""
+    return await smart_click(locator, timeout)
+
 
 async def bam_nut_dang_ky(page, selector_dang_ky):
     """Hàm chuyên dụng để xử lý việc bấm nút đăng ký an toàn"""
@@ -215,24 +212,24 @@ async def cai_dat_mat_khau_rut_tien(page, mat_khau, selector_o_nhap, selector_xa
         for i in range(count_boxes):
             print(f"   -> Đang nhập hàng mật khẩu thứ {i+1}...")
             
-            # Dùng smart_tap (ưu tiên tap cho bàn phím ảo)
+            # BƯỚC QUAN TRỌNG: Phải bấm vào ô nhập để kích hoạt bàn phím ảo
             target_box = pass_boxes.nth(i)
             await smart_tap(target_box)
             await asyncio.sleep(0.8) # Đợi bàn phím ảo trồi lên
             
-            # Kiểm tra bàn phím ảo
+            # Định nghĩa bộ dò bàn phím ảo
             ban_phim_ao = page.locator('.van-keypad, [class*="keyboard"], [class*="keypad"], .number-board').filter(visible=True).first
             
-            if await ban_phim_ao.is_visible(timeout=2000):
+            if await ban_phim_ao.is_visible(timeout=1500):
                 print("   ⌨️ Phát hiện bàn phím ảo, đang bấm số...")
                 for so in mat_khau:
-                    # Tìm nút số chính xác trong bàn phím ảo
                     nut_so = ban_phim_ao.get_by_text(so, exact=True).first
-                    await smart_tap(nut_so) # smart_tap cho phím ảo
-                    await asyncio.sleep(0.2)
+                    await smart_tap(nut_so) 
+                    await asyncio.sleep(0.15) 
             else:
                 print("   ⌨️ Không thấy bàn phím ảo, dùng phím thật...")
-                await page.keyboard.type(mat_khau, delay=150)
+                await page.keyboard.type(mat_khau, delay=80) 
+
             
             await asyncio.sleep(0.5)
 
@@ -374,19 +371,29 @@ async def dien_thong_tin_ngan_hang(page, so_tai_khoan, ten_ngan_hang, cfg):
     try:
         # 1. NHẬP SỐ TÀI KHOẢN
         o_stk = page.locator(selector_stk).last
-        await smart_tap(o_stk)
-        await asyncio.sleep(0.5)
-        await page.keyboard.type(str(so_tai_khoan), delay=100)
+        await o_stk.wait_for(state="visible", timeout=10000)
+        
+        # Chiến thuật 3 lớp: Click -> Focus -> Fill (Để đảm bảo ăn dữ liệu)
+        await smart_click(o_stk)
+        await o_stk.focus()
+        await o_stk.fill(str(so_tai_khoan))
+        
+        # Kiểm tra nếu fill chưa ăn thì gõ phím thật
+        val = await o_stk.input_value()
+        if not val:
+            await page.keyboard.type(str(so_tai_khoan), delay=100)
+        
+        await asyncio.sleep(0.8)
 
         # 2. TÌM NGÂN HÀNG
-        print(f"   -> Đang chạm vào ô tìm kiếm ngân hàng...")
+        print(f"   -> Đang chọn ngân hàng: {ten_ngan_hang}")
         o_tim = page.locator(selector_tim_nh).last
-        await smart_tap(o_tim)
-        await asyncio.sleep(1.0)
-
-        # Gõ tên ngân hàng để lọc
+        await smart_click(o_tim)
+        await o_tim.focus()
+        await o_tim.fill("") # Xóa sạch ô tìm kiếm
         await page.keyboard.type(ten_ngan_hang, delay=100)
-        await asyncio.sleep(3.0) # Đợi web load kết quả (mobile cần lâu hơn)
+        await asyncio.sleep(3.0) 
+
 
         # 3. BẤM CHỌN NGÂN HÀNG — THỬ NHIỀU CHIẾN LƯỢC
         item_ngan_hang = None
@@ -482,6 +489,10 @@ async def dien_thong_tin_ngan_hang(page, so_tai_khoan, ten_ngan_hang, cfg):
         return False
      
 
+import threading
+
+# Tạo một "khóa" chung để các luồng xếp hàng giải Captcha, tránh xung đột
+ocr_lock = threading.Lock()
 ocr = ddddocr.DdddOcr(show_ad=False)
 async def xu_ly_captcha(page, cfg):
 
@@ -503,7 +514,8 @@ async def xu_ly_captcha(page, cfg):
             image_bytes = await anh_element.screenshot()
             
             # 3. Đưa ảnh cho mắt thần ddddocr đọc
-            text_captcha = ocr.classification(image_bytes)
+            with ocr_lock:
+                text_captcha = ocr.classification(image_bytes)
             print(f"🤖 Đã giải mã được mã Captcha: {text_captcha}")
             
             # 4. Gõ kết quả vào ô (Dùng .type để gõ từng phím, không làm mất focus)
@@ -552,7 +564,7 @@ async def get_final_distance(page, cfg, gap_x_opencv):
 
     # 2. Lấy chiều rộng của file ảnh mà OpenCV vừa xử lý
     import cv2
-    img = cv2.imread("temp_bg.png")
+    img = cv2.imread(get_data_path("temp_bg.png"))
     real_width = img.shape[1] # Có thể là 600px hoặc hơn
 
     # 3. Tính tỉ lệ và quy đổi
@@ -563,12 +575,14 @@ async def get_final_distance(page, cfg, gap_x_opencv):
     return final_distance
 
 async def giai_captcha_keo_opencv(page, cfg):
-    try:
+   
         # 0. XÓA ẢNH CŨ
-        for f in ["temp_bg.png", "temp_slice.png"]:
-            if os.path.exists(f):
-                os.remove(f)
-                
+    # Tạo tên file tạm duy nhất cho luồng này để tránh xung đột đa luồng
+    id_luong = random.randint(1000, 9999)
+    bg_path = get_data_path(f"bg_{id_luong}.png")
+    slice_path = get_data_path(f"slice_{id_luong}.png")
+
+    try:
         # 1. Chờ khung captcha xuất hiện
         bg_selector = cfg["captcha_bg_img"]
         slice_selector = cfg["captcha_slice_img"]
@@ -576,21 +590,27 @@ async def giai_captcha_keo_opencv(page, cfg):
         
         await bg_locator.wait_for(state="visible", timeout=10000)
 
-        # 2. CHỜ CHIẾN THUẬT: Đợi ảnh load hoàn toàn
+        # 2. Đợi ảnh load hoàn toàn
         await asyncio.sleep(2.5) 
 
-        # 3. Chụp ảnh mới nhất
-        print("📸 Đang chụp ảnh Captcha...")
-        await bg_locator.screenshot(path="temp_bg.png")
-        await page.locator(slice_selector).screenshot(path="temp_slice.png")
+        # 3. Chụp ảnh (Dùng file riêng cho luồng này)
+        print(f"📸 [Luồng {id_luong}] Đang chụp ảnh Captcha...")
+        await bg_locator.screenshot(path=bg_path)
+        await page.locator(slice_selector).screenshot(path=slice_path)
 
         # 4. Tính toán khoảng cách bằng OpenCV
-        gap_x_raw = calculate_distance_opencv("temp_bg.png", "temp_slice.png")
+        gap_x_raw = calculate_distance_opencv(bg_path, slice_path)
+        
+        # Xóa file ngay sau khi tính xong để dọn rác
+        for f in [bg_path, slice_path]:
+            if os.path.exists(f): os.remove(f)
+
         if gap_x_raw <= 0:
-            print("⚠️ OpenCV không tìm thấy lỗ trống.")
+            print(f"⚠️ [Luồng {id_luong}] OpenCV không tìm thấy lỗ trống.")
             return False
 
         distance = await get_final_distance(page, cfg, gap_x_raw)
+
         print(f"📏 Web Width: {distance/0.33:.1f} | Gap: {gap_x_raw} | Distance: {distance:.2f}px")
 
         # 5. Lấy tọa độ nút kéo
@@ -602,24 +622,82 @@ async def giai_captcha_keo_opencv(page, cfg):
         start_x = box['x'] + box['width'] / 2
         start_y = box['y'] + box['height'] / 2
 
-        # 6. THỰC HIỆN KÉO
-        await page.mouse.move(start_x, start_y)
-        await page.mouse.down()
-        await asyncio.sleep(0.3)
+        # 6. THỰC HIỆN KÉO THÔNG MINH (Smart Drag - Hỗ trợ cả Tap và Click)
+        print(f"🚀 Đang bắt đầu kéo {distance:.2f}px...")
+        
+        # Kiểm tra xem có phải mobile profile không (dựa trên touch support)
+        is_mobile = await page.evaluate("() => 'ontouchstart' in window || navigator.maxTouchPoints > 0")
+        
+        if is_mobile:
+            print("📱 Chế độ Mobile: Dùng Touch Events để kéo...")
+            # Tạo các mốc di chuyển mô phỏng tay người
+            steps = []
+            for i in range(1, 11):
+                t = i / 10
+                move_ratio = 1 - (1 - t) ** 3
+                steps.append({
+                    'x': start_x + (distance * move_ratio),
+                    'y': start_y + random.uniform(-2, 2)
+                })
 
-        steps = 100
-        for i in range(1, steps + 1):
-            t = i / steps
-            move_ratio = 1 - (1 - t) ** 3 # Ease Out
-            current_x = start_x + (distance * move_ratio)
-            current_y = start_y + random.uniform(-1, 1)
-            
-            await page.mouse.move(current_x, current_y, steps=1)
-            if i % 10 == 0:
-                await asyncio.sleep(0.01)
+            # Sử dụng JS để dispatch touch events chính xác cho mobile emulation
+            await page.evaluate(f"""
+                async ({{selector, steps, startX, startY}}) => {{
+                    const el = document.querySelector(selector);
+                    if (!el) return;
 
-        await asyncio.sleep(0.5) 
-        await page.mouse.up() 
+                    const createTouch = (x, y) => new Touch({{
+                        identifier: Date.now(),
+                        target: el,
+                        clientX: x,
+                        clientY: y,
+                        pageX: x,
+                        pageY: y,
+                    }});
+
+                    const dispatch = (type, x, y) => {{
+                        const touch = createTouch(x, y);
+                        el.dispatchEvent(new TouchEvent(type, {{
+                            cancelable: true,
+                            bubbles: true,
+                            touches: [touch],
+                            targetTouches: [touch],
+                            changedTouches: [touch]
+                        }}));
+                    }};
+
+                    dispatch('touchstart', startX, startY);
+                    for (const step of steps) {{
+                        await new Promise(r => setTimeout(r, 20 + Math.random() * 30));
+                        dispatch('touchmove', step.x, step.y);
+                    }}
+                    dispatch('touchend', steps[steps.length-1].x, steps[steps.length-1].y);
+                }}
+            """, {
+                'selector': cfg["captcha_slider_btn"],
+                'steps': steps,
+                'startX': start_x,
+                'startY': start_y
+            })
+        else:
+            print("💻 Chế độ Desktop: Dùng Mouse Events để kéo...")
+            await page.mouse.move(start_x, start_y)
+            await page.mouse.down()
+            await asyncio.sleep(0.3)
+
+            steps = 50
+            for i in range(1, steps + 1):
+                t = i / steps
+                move_ratio = 1 - (1 - t) ** 3 # Ease Out
+                current_x = start_x + (distance * move_ratio)
+                current_y = start_y + random.uniform(-1, 1)
+                
+                await page.mouse.move(current_x, current_y, steps=1)
+                if i % 10 == 0:
+                    await asyncio.sleep(0.01)
+
+            await asyncio.sleep(0.5) 
+            await page.mouse.up() 
         
         print("🖱️ Đã kéo xong, đang đợi kiểm tra kết quả...")
         await asyncio.sleep(4.0) # Đợi web check kết quả
@@ -627,17 +705,17 @@ async def giai_captcha_keo_opencv(page, cfg):
         # 7. KIỂM TRA THỰC TẾ
         is_still_visible = await page.locator(bg_selector).is_visible()
         
-        if is_still_visible:
-            print("❌ Captcha vẫn còn, đang bấm làm mới...")
-            refresh_btn = page.locator("div[class*='botion_refresh']")
-            if await refresh_btn.is_visible():
-                await refresh_btn.click()
-            return False 
-        
         print("✅ Thành công!")
         return True
 
     except Exception as e:
         print(f"❌ Lỗi khi giải captcha: {e}")
+        # Tự động refresh captcha nếu lỗi
+        try:
+            refresh_btn = page.locator("div[class*='botion_refresh'], .refresh_btn").first
+            if await refresh_btn.is_visible(): await refresh_btn.click()
+        except: pass
+        return False
+
         return False
     

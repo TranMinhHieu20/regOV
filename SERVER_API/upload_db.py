@@ -107,7 +107,7 @@ WEB_CONFIG = {
         "cat_so_0": False,
         "input_captcha": "input[placeholder*='Vui lòng nhập mã xác minh']",
         "anh_captcha": "img.absolute.right-7.top-1",
-        "nut_dangky": "button:has-text('ĐĂNG KÝ NGAY')",
+        "nut_dangky": "span[translate='Login_RegisterBtn']",
         "nut_dong_popup": [".ui-dialog-close-box__icon", 
             ".ui-dialog-close",
             ".close-icon", 
@@ -116,18 +116,32 @@ WEB_CONFIG = {
             "span:has-text('Đóng')",
             "i.fa-times-circle",                 # Bắt thẳng vào cái icon chữ X
             "button[ng-click*='$ctrl.ok']",      # Bắt vào sự kiện click tắt của Angular
-            ".modal-content button.btn-link"]
+            ".modal-content button.btn-link",
+            "button:has-text('Đóng')",
+            "button:has-text('Tôi Biết Rồi')",
+        ],
+        "nut_toi": "span:text-is('TÀI KHỎAN')",
+        "nut_rut_tien": "span:text-is('Rút Tiền')",
+        "nut_cai_dat": "span:text-is('Mật khẩu rút tiền chưa cài đặt, vui lòng cài đặt mật khẩu rút tiền trước (chọn vào đây để cài đặt)')",
+        "o_nhap_pass_rut": "input[formcontrolname('newPassword')]",
+        "o_nhap_xac_nhan_pass_rut":"input[formcontrolname('confirm')]",
+        "nut_xacnhan_pass_rut": "span:has-text('Gửi đi')",
+        "input_stk": "input[formcontrolname:('account')]", 
+        "input_tim_ngan_hang": "input[placeholder*='Chọn ngân hàng phát hành']", # Đổi sang tìm ô Search
+        "item_ngan_hang": ".ui-options__option",
+        "chi_nhanh": "input[formcontrolname:('city')]",
+        "nut_luu_ngan_hang": "button:has-text('Xác Nhận')"
             
     },
-    "qq88.com": {
-        "input_username": "input[placeholder*='Vui lòng nhập tên tài khoản']",
-        "input_password": "input[placeholder*='Vui lòng nhập mật khẩu']",
-        "input_realName": "input[placeholder*='Họ và tên']",
-        "input_phone": "input[placeholder*='Số điện thoại']",
+    "www.qq8894.com": {
+        "input_username": "input[placeholder*='Vui lòng nhập tên đăng nhập']",
+        "input_password": "input[placeholder*='Vui lòng nhập mật khẩu đăng nhập']",
+        "input_realName": "input[placeholder*='Vui lòng nhập họ và tên đầy đủ']",
+        "input_phone": "input[placeholder*='Vui lòng nhập chính xác SĐT']",
         "cat_so_0": False,
-        "input_captcha": "input[placeholder*='Vui lòng nhập mã xác minh']",
-        "anh_captcha": "img.absolute.right-7.top-1",
-        "nut_dangky": "button:has-text('ĐĂNG KÝ NGAY')",
+        # "input_captcha": "input[placeholder*='Vui lòng nhập mã xác minh']",
+        # "anh_captcha": "img.absolute.right-7.top-1",
+        "nut_dangky": "button:has-text('ĐĂNG KÝ')",
         "nut_dong_popup": [".ui-dialog-close-box__icon", 
             ".ui-dialog-close",
             ".close-icon", 
@@ -158,6 +172,37 @@ WEB_CONFIG = {
             "button[ng-click*='$ctrl.ok']",      # Bắt vào sự kiện click tắt của Angular
             ".modal-content button.btn-link"]
             
+    },
+    "m.f8betf.cool": {
+        "input_username": "input[formcontrolname='account']",
+        "input_password": "input[formcontrolname='password']",
+        "input_realName": "input[formcontrolname*='name']",
+        "input_phone": "input[formcontrolname*='mobile']",
+        "cat_so_0": False,
+        "nut_dangky": "button:has-text('ĐĂNG KÝ NGAY')",
+        "nut_dong_popup": [".ui-dialog-close-box__icon", 
+            ".ui-dialog-close",
+            ".close-icon", 
+            "[aria-label*='close' i]",
+            "i[class*='close']", 
+            "button:has-text('Đóng')",
+            "span:has-text('x')",
+            "span:has-text('X')",
+            "i.fa-times-circle",                 # Bắt thẳng vào cái icon chữ X
+            "button[ng-click*='$ctrl.ok']",      # Bắt vào sự kiện click tắt của Angular
+            ".modal-content button.btn-link"],
+        "nut_toi": "span:text-is('Tôi')",
+        "nut_rut_tien": "p:text-is('Rút Tiền')",
+        "o_nhap_pass_rut": ".ui-password-input__security.hairline--surround",
+        "nut_xacnhan_pass_rut": "button:has-text('Xác Nhận')",
+        "nut_them_tai_khoan": "span:text-is('Thêm Tài Khoản')",
+        "nut_tai_khoan_ngan_hang": "p:text-is('Tài khoản ngân hàng')",
+        "o_nhap_pass_xac_minh": ".ui-password-input__security.hairline--surround", # Selector ô nhập pass hiện ra sau khi chọn Loại Ngân hàng
+        "nut_xac_nhan_verify": "span:text-is('Tiếp Theo')",
+        "input_stk": "input[placeholder*='Vui lòng nhập số tài khoản ngân hàng']", 
+        "input_tim_ngan_hang": "input[placeholder*='Chọn ngân hàng phát hành']", # Đổi sang tìm ô Search
+        "item_ngan_hang": ".ui-options__option",
+        "nut_luu_ngan_hang": "button:has-text('Xác Nhận')"
     },
     "default": {
         "input_username": "input[type='text']",
