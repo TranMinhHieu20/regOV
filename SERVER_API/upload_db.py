@@ -123,8 +123,8 @@ WEB_CONFIG = {
         "nut_toi": "span:text-is('TÀI KHỎAN')",
         "nut_rut_tien": "span:text-is('Rút Tiền')",
         "nut_cai_dat": "span:text-is('Mật khẩu rút tiền chưa cài đặt, vui lòng cài đặt mật khẩu rút tiền trước (chọn vào đây để cài đặt)')",
-        "o_nhap_pass_rut": "input[formcontrolname('newPassword')]",
-        "o_nhap_xac_nhan_pass_rut":"input[formcontrolname('confirm')]",
+        "o_nhap_pass_rut": "input[formcontrolname='newPassword']",
+        "o_nhap_xac_nhan_pass_rut":"input[formcontrolname='confirm']",
         "nut_xacnhan_pass_rut": "span:has-text('Gửi đi')",
         "input_stk": "input[formcontrolname:('account')]", 
         "input_tim_ngan_hang": "input[placeholder*='Chọn ngân hàng phát hành']", # Đổi sang tìm ô Search
