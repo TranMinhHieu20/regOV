@@ -557,15 +557,15 @@ def calculate_distance_opencv(bg_path, slice_path):
         print(f"❌ Lỗi OpenCV: {e}")
         return 0
     
-async def get_final_distance(page, cfg, gap_x_opencv):
+async def get_final_distance(page, cfg, gap_x_opencv, bg_path):
     # 1. Lấy chiều rộng thực tế của khung Captcha trên màn hình web
     bg_box = await page.locator(cfg["captcha_bg_img"]).bounding_box()
-    web_width = bg_box['width'] # Thường khoảng 260-300px
+    web_width = bg_box['width'] 
 
-    # 2. Lấy chiều rộng của file ảnh mà OpenCV vừa xử lý
+    # 2. Đọc ảnh từ file CỦA RIÊNG LUỒNG NÀY (Không dùng temp_bg.png nữa)
     import cv2
-    img = cv2.imread(get_data_path("temp_bg.png"))
-    real_width = img.shape[1] # Có thể là 600px hoặc hơn
+    img = cv2.imread(bg_path) 
+    real_width = img.shape[1] 
 
     # 3. Tính tỉ lệ và quy đổi
     ratio = web_width / real_width
@@ -573,9 +573,7 @@ async def get_final_distance(page, cfg, gap_x_opencv):
     
     print(f"📏 Web Width: {web_width} | Real Width: {real_width} | Ratio: {ratio}")
     return final_distance
-
 async def giai_captcha_keo_opencv(page, cfg):
-   
         # 0. XÓA ẢNH CŨ
     # Tạo tên file tạm duy nhất cho luồng này để tránh xung đột đa luồng
     id_luong = random.randint(1000, 9999)
@@ -601,17 +599,21 @@ async def giai_captcha_keo_opencv(page, cfg):
         # 4. Tính toán khoảng cách bằng OpenCV
         gap_x_raw = calculate_distance_opencv(bg_path, slice_path)
         
-        # Xóa file ngay sau khi tính xong để dọn rác
+        if gap_x_raw <= 0:
+            print(f"⚠️ [Luồng {id_luong}] OpenCV không tìm thấy lỗ trống.")
+            # Dọn rác nếu lỗi
+            for f in [bg_path, slice_path]:
+                if os.path.exists(f): os.remove(f)
+            return False
+
+        # Truyền đường dẫn ảnh vào để lấy chiều rộng
+        distance = await get_final_distance(page, cfg, gap_x_raw, bg_path)
+
+        # XONG XUÔI HẾT RỒI MỚI XÓA FILE ĐỂ DỌN RÁC
         for f in [bg_path, slice_path]:
             if os.path.exists(f): os.remove(f)
 
-        if gap_x_raw <= 0:
-            print(f"⚠️ [Luồng {id_luong}] OpenCV không tìm thấy lỗ trống.")
-            return False
-
-        distance = await get_final_distance(page, cfg, gap_x_raw)
-
-        print(f"📏 Web Width: {distance/0.33:.1f} | Gap: {gap_x_raw} | Distance: {distance:.2f}px")
+        print(f"📏 Độ lệch chuẩn: {gap_x_raw} | Distance cần kéo: {distance:.2f}px")
 
         # 5. Lấy tọa độ nút kéo
         slider_locator = page.locator(cfg["captcha_slider_btn"])
@@ -702,10 +704,14 @@ async def giai_captcha_keo_opencv(page, cfg):
         print("🖱️ Đã kéo xong, đang đợi kiểm tra kết quả...")
         await asyncio.sleep(4.0) # Đợi web check kết quả
 
-        # 7. KIỂM TRA THỰC TẾ
-        is_still_visible = await page.locator(bg_selector).is_visible()
+        #7. KIỂM TRA THỰC TẾ
+        is_still_visible = await page.locator(bg_selector).is_visible(timeout=3000)
         
-        print("✅ Thành công!")
+        if is_still_visible:
+            print("❌ Kéo trượt hoặc bị hệ thống phát hiện bot!")
+            return False
+            
+        print("✅ Thành công vượt qua Captcha!")
         return True
 
     except Exception as e:
