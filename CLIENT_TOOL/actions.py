@@ -473,7 +473,7 @@ async def xac_minh_mat_khau_truoc_khi_them(page, mat_khau, selector_o_nhap, sele
         return False
 
 
-async def dien_thong_tin_ngan_hang(page, so_tai_khoan, ten_ngan_hang, cfg):
+async def dien_thong_tin_ngan_hang(page, so_tai_khoan, ten_ngan_hang, chi_nhanh, cfg):
     """Hàm điền form ngân hàng — tự động tương thích c168, hi144 và các trang khác"""
     
     # 1. LẤY CẤU HÌNH TỪ DATABASE
@@ -636,7 +636,7 @@ async def dien_thong_tin_ngan_hang(page, so_tai_khoan, ten_ngan_hang, cfg):
             try:
                 o_chi_nhanh = page.locator(selector_chi_nhanh).last
                 await smart_click(o_chi_nhanh)
-                await o_chi_nhanh.fill("Hà Nội") # Có thể thay bằng dữ liệu lấy từ DB
+                await o_chi_nhanh.fill(chi_nhanh) # Có thể thay bằng dữ liệu lấy từ DB
                 await asyncio.sleep(0.5)
             except Exception as e:
                 print(f"      ⚠️ Lỗi nhập chi nhánh: {e}")

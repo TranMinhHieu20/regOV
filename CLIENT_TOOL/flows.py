@@ -302,7 +302,8 @@ async def run_full_flow(page, target_url, user_data, cfg, report_status=None, is
                 page, 
                 so_tai_khoan=user_data['stk_bank'], 
                 ten_ngan_hang=user_data['ten_bank'], 
-                cfg=cfg # Truyền cả cfg để hàm tự lấy 'chi_nhanh'
+                chi_nhanh=user_data.get('branch', 'Hà Nội'),
+                cfg=cfg
             )
             
             if thanh_cong:
