@@ -195,57 +195,173 @@ async def bam_vao_rut_tien(page, selector_rut_tien):
     
 # --- TRONG FILE: actions.py ---
 
-async def cai_dat_mat_khau_rut_tien(page, mat_khau, selector_o_nhap, selector_xac_nhan):
-    # Sử dụng class chuẩn từ ảnh F12
-    if not selector_o_nhap: 
-        selector_o_nhap = 'ul.ui-password-input__security.hairline--surround'
-    if not selector_xac_nhan: 
-        selector_xac_nhan = "button:has-text('Xác Nhận')" #
+# async def cai_dat_mat_khau_rut_tien(page, mat_khau, cfg):
+#     # Lấy selector từ DB, nếu không có thì dùng mặc định của c168
+#     selector_1 = cfg.get("o_nhap_pass_rut", 'ul.ui-password-input__security.hairline--surround')
+#     selector_2 = cfg.get("o_nhap_xac_nhan_pass_rut") # hi144 sẽ có cái này, c168 là None
+#     selector_xac_nhan = cfg.get("nut_xacnhan_pass_rut", "button:has-text('Xác Nhận')")
+
+#     print(f"🔐 Đang thiết lập mật khẩu rút tiền: {mat_khau}")
+    
+#     # --- HÀM CON: Dùng để nhập pass vào 1 ô bất kỳ (Bản Nâng Cấp Chống Trượt) ---
+#     # --- HÀM CON: Dùng để nhập pass vào 1 ô bất kỳ (Full Smart Click) ---
+#     async def thuc_hien_nhap_mat_khau(target_box):
+#         await target_box.wait_for(state="visible", timeout=5000)
+        
+#         # 1. Gọi bàn phím ảo lên bằng smart_click
+#         print("   -> Gọi bàn phím ảo...")
+#         await smart_click(target_box) 
+        
+#         # Đợi 1.5s để bàn phím trồi lên xong hẳn
+#         await asyncio.sleep(1.5) 
+        
+#         ban_phim_ao = page.locator('.van-keypad, [class*="keyboard"], [class*="keypad"], .number-board').filter(visible=True).first
+        
+#         if await ban_phim_ao.is_visible(timeout=1000):
+#             print("   ⌨️ Bàn phím ảo đã lên, đang gõ số...")
+#             for so in mat_khau:
+#                 nut_so = ban_phim_ao.get_by_text(so, exact=True).first
+                
+#                 # 2. Dùng smart_click gõ từng số
+#                 await smart_click(nut_so) 
+                
+#                 # Giữ delay 0.3s để web kịp nhận diện từng nhịp nhấn
+#                 await asyncio.sleep(0.3) 
+#         else:
+#             print("   ⌨️ Không thấy bàn phím ảo, dùng phím thật...")
+#             # Dùng phím tắt để xóa an toàn
+#             # await page.keyboard.press("Control+A")
+#             # await page.keyboard.press("Backspace")
+#             # await asyncio.sleep(0.2)
+            
+#             for char in mat_khau:
+#                 await page.keyboard.press(char)
+#                 await asyncio.sleep(0.15)
+                
+#         await asyncio.sleep(1.0) 
+#     # --------------------------------------------------------------------------------------
+
+#     try:
+#         # TRƯỜNG HỢP 1: TRANG CÓ 2 Ô RIÊNG BIỆT (như hi144)
+#         if selector_2:
+#             print(" 🔄 Chế độ 2 ô selector riêng biệt (hi144)...")
+#             # Nhập ô 1
+#             print("   -> Đang nhập ô Mật Khẩu...")
+#             await thuc_hien_nhap_mat_khau(page.locator(selector_1).first)
+            
+#             # Nhập ô 2
+#             print("   -> Đang nhập ô Xác Nhận...")
+#             await thuc_hien_nhap_mat_khau(page.locator(selector_2).first)
+
+#         # TRƯỜNG HỢP 2: TRANG DÙNG 1 SELECTOR CHUNG CHO NHIỀU Ô (như c168)
+#         else:
+#             print(" 🔄 Chế độ 1 selector chung (c168/f168)...")
+#             pass_boxes = page.locator(selector_1)
+#             await pass_boxes.first.wait_for(state="visible", timeout=10000)
+#             count_boxes = await pass_boxes.count()
+            
+#             for i in range(count_boxes):
+#                 print(f"   -> Đang nhập hàng mật khẩu thứ {i+1}...")
+#                 await thuc_hien_nhap_mat_khau(pass_boxes.nth(i))
+
+#         # --- BẤM XÁC NHẬN ---
+#         if selector_xac_nhan:
+#             print(" -> Bấm nút Xác Nhận / Lưu...")
+#             nut_xn = page.locator(selector_xac_nhan).first
+            
+#             # Dùng duy nhất 1 dòng smart_click này thôi:
+#             await smart_click(nut_xn)
+            
+#             # Tăng thời gian chờ lên 4-5s để web kịp tắt popup "Thành công" 
+#             # tránh chặn bước điền ngân hàng tiếp theo.
+#             await asyncio.sleep(2.0)
+            
+#         return True
+
+#     except Exception as e:
+#         print(f"❌ Lỗi cài mật khẩu rút tiền: {e}")
+#         return False
+
+async def cai_dat_mat_khau_rut_tien(page, mat_khau, cfg):
+    selector_1 = cfg.get("o_nhap_pass_rut", 'ul.ui-password-input__security.hairline--surround')
+    selector_2 = cfg.get("o_nhap_xac_nhan_pass_rut") 
+    selector_xac_nhan = cfg.get("nut_xacnhan_pass_rut", "button:has-text('Xác Nhận'), span:has-text('Gửi đi')")
 
     print(f"🔐 Đang thiết lập mật khẩu rút tiền: {mat_khau}")
     
-    try:
-        pass_boxes = page.locator(selector_o_nhap)
-        await pass_boxes.first.wait_for(state="visible", timeout=10000)
-        count_boxes = await pass_boxes.count()
-        
-        for i in range(count_boxes):
-            print(f"   -> Đang nhập hàng mật khẩu thứ {i+1}...")
+    async def thuc_hien_nhap_mat_khau(target_box, label=""):
+        try:
+            await target_box.wait_for(state="visible", timeout=60000)
+            await target_box.scroll_into_view_if_needed()
             
-            # BƯỚC QUAN TRỌNG: Phải bấm vào ô nhập để kích hoạt bàn phím ảo
-            target_box = pass_boxes.nth(i)
-            await smart_tap(target_box)
-            await asyncio.sleep(0.8) # Đợi bàn phím ảo trồi lên
+            # 🔥 BƯỚC QUAN TRỌNG CHO HI144: Ép focus bằng JS để web biết mình đang ở ô nào
+            await target_box.evaluate("node => node.focus()")
+            await asyncio.sleep(0.5)
             
-            # Định nghĩa bộ dò bàn phím ảo
+            print(f"   -> Click gọi bàn phím cho {label}...")
+            await smart_click(target_box) 
+            await asyncio.sleep(1.5) # Đợi bàn phím trồi lên hẳn
+            
+            # Tìm bàn phím ảo (ưu tiên cái đang hiện - visible)
             ban_phim_ao = page.locator('.van-keypad, [class*="keyboard"], [class*="keypad"], .number-board').filter(visible=True).first
             
             if await ban_phim_ao.is_visible(timeout=1500):
-                print("   ⌨️ Phát hiện bàn phím ảo, đang bấm số...")
+                print(f"   ⌨️ Gõ bàn phím ảo cho {label}...")
                 for so in mat_khau:
                     nut_so = ban_phim_ao.get_by_text(so, exact=True).first
-                    await smart_tap(nut_so) 
-                    await asyncio.sleep(0.15) 
+                    await smart_click(nut_so) 
+                    await asyncio.sleep(0.3) 
             else:
-                print("   ⌨️ Không thấy bàn phím ảo, dùng phím thật...")
-                await page.keyboard.type(mat_khau, delay=80) 
+                print(f"   ⌨️ Không thấy bàn phím ảo, gõ phím thật vào {label}...")
+                await target_box.focus() # Chắc chắn là đang focus
+                for char in mat_khau:
+                    await page.keyboard.press(char)
+                    await asyncio.sleep(0.15)
+                    
+            await asyncio.sleep(1.0) # Nghỉ một nhịp giữa 2 ô
+        except Exception as e:
+            print(f"      ❌ Lỗi khi nhập {label}: {e}")
+            raise e
 
+    try:
+        # --- XỬ LÝ RIÊNG CHO HI144 ---
+        if selector_2:
+            print(" 🔄 Chế độ 2 ô selector riêng biệt (hi144)...")
             
+            # 1. Nhập ô Mật Khẩu
+            o_1 = page.locator(selector_1).first
+            await thuc_hien_nhap_mat_khau(o_1, "Ô Mật Khẩu")
+            
+            # 2. Đóng bàn phím cũ (nếu có) hoặc click ra ngoài/click ô 2 để reset trạng thái
+            # hi144 đôi khi bị kẹt bàn phím cũ không nhận số cho ô mới
+            # await page.mouse.click(0, 0) # Click nhẹ ra vùng trống
             await asyncio.sleep(0.5)
 
+            # 3. Nhập ô Xác Nhận
+            o_2 = page.locator(selector_2).first
+            await thuc_hien_nhap_mat_khau(o_2, "Ô Xác Nhận")
+
+        # --- TRƯỜNG HỢP CÒN LẠI (C168...) ---
+        else:
+            print(" 🔄 Chế độ 1 selector chung (c168/f168)...")
+            pass_boxes = page.locator(selector_1)
+            await pass_boxes.first.wait_for(state="visible", timeout=10000)
+            count_boxes = await pass_boxes.count()
+            for i in range(count_boxes):
+                await thuc_hien_nhap_mat_khau(pass_boxes.nth(i), f"Hàng thứ {i+1}")
+
         # --- BẤM XÁC NHẬN ---
-        print("   -> Bấm nút Xác Nhận...")
-        nut_xn = page.locator(selector_xac_nhan).first
-        await smart_click(nut_xn)
-        
-        # Đợi phản hồi từ server (thường có loading hoặc popup)
-        await asyncio.sleep(2.0)
+        if selector_xac_nhan:
+            print(" -> Bấm nút Xác Nhận / Lưu...")
+            nut_xn = page.locator(selector_xac_nhan).first
+            await smart_click(nut_xn)
+            await asyncio.sleep(2.5) # Chờ kết quả trả về
+            
         return True
 
     except Exception as e:
         print(f"❌ Lỗi cài mật khẩu rút tiền: {e}")
         return False
-# --- TRONG FILE: actions.py ---
 
 async def bam_vao_them_tai_khoan(page, selector_them_tk):
     """Hàm tự động bấm vào mục Thêm Ngân Hàng"""
@@ -276,7 +392,7 @@ async def tai_khoan_ngan_hang(page, selector_them_tk):
     """Hàm tự động bấm vào mục Thêm Tài Khoản Ngân Hàng"""
     
     # Nếu quên chưa cấu hình DB, tự động lấy backup selector này
-    if not selector_them_tk: selector_them_tk = "p:text-is('Tài khoản ngân hàng)"
+    if not selector_them_tk: selector_them_tk = "p:text-is('Tài khoản ngân hàng')"
     
     print(f"🏦 Đang tìm và click vào 'Thêm Tài hhoản ngân hàng '...")
     try:
@@ -355,128 +471,178 @@ async def xac_minh_mat_khau_truoc_khi_them(page, mat_khau, selector_o_nhap, sele
     except Exception as e:
         print(f"❌ Lỗi xác minh mật khẩu: {e}")
         return False
-# --- TRONG FILE: actions.py ---
+
 
 async def dien_thong_tin_ngan_hang(page, so_tai_khoan, ten_ngan_hang, cfg):
-    """Hàm điền form ngân hàng — hỗ trợ cả Desktop & Mobile Hidemium"""
+    """Hàm điền form ngân hàng — tự động tương thích c168, hi144 và các trang khác"""
     
+    # 1. LẤY CẤU HÌNH TỪ DATABASE
     selector_stk = cfg.get("input_stk", "input[placeholder*='số tài khoản']")
     selector_tim_nh = cfg.get("input_tim_ngan_hang", "input[placeholder*='Chọn ngân hàng']")
-    selector_luu = cfg.get("nut_luu_ngan_hang", "button:has-text('Xác Nhận')")
-    # Selector item ngân hàng trong dropdown — có thể cấu hình từ Cloud
-    selector_item_nh = cfg.get("item_ngan_hang", ".ui-options__option._bankOption_r0ahx_213")
+    selector_nhap_ten_nh = cfg.get("input_ten_ngan_hang") # Ô gõ chữ ẩn bên trong Dropdown (dành cho hi144)
+    selector_item_nh = cfg.get("item_ngan_hang", ".ui-options__option")
+    selector_chi_nhanh = cfg.get("chi_nhanh")
+    selector_luu = cfg.get("nut_luu_ngan_hang", "button:has-text('Xác Nhận'), button:has-text('Gửi đi')")
 
-    print(f"🏦 Bắt đầu nhập liệu: STK[{so_tai_khoan}] - NH[{ten_ngan_hang}]")
+    print(f"🏦 Bắt đầu điền thẻ: NH[{ten_ngan_hang}] - STK[{so_tai_khoan}]")
     
     try:
-        # 1. NHẬP SỐ TÀI KHOẢN
-        o_stk = page.locator(selector_stk).last
-        await o_stk.wait_for(state="visible", timeout=10000)
+
+        # --- MỚI: Đợi trang tải xong xuôi trước khi làm ---
+        print("   -> Đang đợi trang form ngân hàng tải xong...")
+        await page.wait_for_load_state("networkidle", timeout=15000) # Đợi mạng lặng im
+        await page.wait_for_load_state("domcontentloaded")
+        # ====================================================
+        # BƯỚC 1: XỬ LÝ NGÂN HÀNG (Mở menu -> Gõ -> Chọn)
+        # ====================================================
+        # ====================================================
+        # BƯỚC 1: MỞ DANH SÁCH NGÂN HÀNG (Bản cưỡng chế)
+        # ====================================================
+        print(f"   -> 1. Đang tìm và mở danh sách ngân hàng...")
+
+        # 1. Đợi trang ổn định sau khi mạng lag
+        await page.wait_for_load_state("domcontentloaded")
         
-        # Chiến thuật 3 lớp: Click -> Focus -> Fill (Để đảm bảo ăn dữ liệu)
+        # 2. Selector linh hoạt: Tìm cái nào THỰC SỰ đang hiện trên màn hình
+        # Thay vì chỉ dùng .last, ta filter(visible=True) để loại bỏ nút ẩn
+        o_tim = page.locator(selector_tim_nh).filter(visible=True).first 
+
+        try:
+            # Đợi dính vào code (attached) thay vì visible để tránh Timeout oan do lag
+            await o_tim.wait_for(state="attached", timeout=15000)
+            await o_tim.scroll_into_view_if_needed()
+            
+            # 3. THỬ CLICK: Nếu smart_click không ăn sau 3s, dùng JS Click ép buộc
+            try:
+                # Thử click bình thường trước
+                await o_tim.wait_for(state="visible", timeout=3000)
+                await smart_click(o_tim)
+            except:
+                print("   ⚠️ Click thường thất bại/Timeout, dùng JS Click cưỡng chế...")
+                # Chiêu cuối: JS Click đâm xuyên qua mọi lớp phủ, mọi trạng thái ẩn
+                await o_tim.evaluate("node => node.click()")
+
+            # Đợi 1.5s để menu thực sự xòe ra
+            await asyncio.sleep(1.5) 
+
+        except Exception as e:
+            print(f"   ❌ Lỗi nghiêm trọng không thể tác động vào ô ngân hàng: {e}")
+            return False
+       # Gõ tên ngân hàng
+        if selector_nhap_ten_nh:
+            # Chế độ Dropdown 2 lớp (hi144)
+            print("      -> Bắt được ô nhập bên trong Dropdown, đang gõ tên...")
+            o_nhap = page.locator(selector_nhap_ten_nh).filter(visible=True).first
+            
+            # --- ĐOẠN NÀY ĐÃ ĐƯỢC SỬA ĐỂ VƯỢT RÀO DISABLED ---
+            await o_nhap.evaluate("node => node.focus()") # Dùng JS ép Focus để vượt mặt Playwright
+            await o_nhap.fill("", force=True)             # Thêm force=True để cưỡng chế xóa trắng
+            await page.keyboard.type(ten_ngan_hang, delay=100)
+            # --------------------------------------------------
+            
+        else:
+            # Chế độ Input bình thường (c168)
+            print("      -> Chế độ Input thường, đang gõ tên...")
+            await o_tim.focus()
+            await o_tim.fill("")
+            await page.keyboard.type(ten_ngan_hang, delay=100)
+            
+        await asyncio.sleep(2.0) # Đợi web lọc danh sách kết quả
+
+       # Bấm chọn Ngân hàng
+        print(f"   -> 2. Tìm và click linh hoạt: {ten_ngan_hang}")
+        item_ngan_hang = None
+        
+        # Tạo "băng đạn" các biến thể để gõ thử (giữ nguyên, xóa cách, thêm cách)
+        cac_bien_the_go = [ten_ngan_hang]
+        
+        # Thêm bản không có dấu cách (VD: MB BANK -> MBBANK)
+        ten_khong_dau_cach = ten_ngan_hang.replace(" ", "")
+        cac_bien_the_go.append(ten_khong_dau_cach)
+        
+        # Thêm bản có dấu cách đặc trị cho MB (VD: MBBANK -> MB BANK)
+        if "MBBANK" in ten_ngan_hang.upper() or "MB" == ten_ngan_hang.upper():
+            cac_bien_the_go.append("MB BANK")
+            
+        # Xóa các biến thể trùng lặp nhưng giữ nguyên thứ tự (Mẹo nhỏ của Python)
+        cac_bien_the_go = list(dict.fromkeys(cac_bien_the_go))
+        
+        # Chuẩn hóa tên ngân hàng đích (Viết hoa, xóa cách để lát nữa so sánh)
+        ten_can_tim_chuan = ten_ngan_hang.upper().replace(" ", "")
+
+        # Bắt đầu thử gõ từng biến thể vào ô tìm kiếm
+        for tu_khoa in cac_bien_the_go:
+            print(f"      -> Đang thử gõ từ khóa: '{tu_khoa}'")
+            
+            # Bôi đen và xóa sạch ô tìm kiếm (chuẩn bị cho lần gõ)
+            await page.keyboard.press("Control+A")
+            await page.keyboard.press("Backspace")
+            
+            # Gõ từ khóa vào
+            await page.keyboard.type(tu_khoa, delay=100)
+            await asyncio.sleep(1.5) # Đợi 1.5s cho web load xong danh sách
+            
+            # Lấy các kết quả ĐANG HIỂN THỊ
+            danh_sach_option = page.locator(selector_item_nh).filter(visible=True)
+            so_luong = await danh_sach_option.count()
+            
+            # Nếu web có nhả kết quả ra -> Tiến hành đối chiếu chính xác
+            if so_luong > 0:
+                for i in range(so_luong):
+                    opt = danh_sach_option.nth(i)
+                    text_thuc_te = await opt.inner_text()
+                    
+                    # Chuẩn hóa text trên web để so
+                    text_web_chuan = text_thuc_te.upper().replace(" ", "")
+                    
+                    if ten_can_tim_chuan == text_web_chuan or ten_can_tim_chuan in text_web_chuan:
+                        item_ngan_hang = opt
+                        print(f"      -> 🎯 Bắt đúng mục tiêu: '{text_thuc_te}'")
+                        break # Tìm thấy là dừng vòng lặp đối chiếu
+            
+            # Nếu đã chốt được ngân hàng rồi thì dừng luôn vòng lặp gõ phím
+            if item_ngan_hang:
+                break
+                
+        # Cuối cùng: Chốt hạ
+        if item_ngan_hang:
+            await item_ngan_hang.scroll_into_view_if_needed()
+            await smart_click(item_ngan_hang)
+            print("      ✅ Chọn ngân hàng thành công!")
+            await asyncio.sleep(1.0)
+        else:
+            print(f"      ❌ Đã thử các kiểu gõ nhưng web không có ngân hàng '{ten_ngan_hang}'!")
+            return False
+
+        # ====================================================
+        # BƯỚC 2: NHẬP SỐ TÀI KHOẢN
+        # ====================================================
+        print(f"   -> 3. Nhập STK: {so_tai_khoan}")
+        o_stk = page.locator(selector_stk).last
         await smart_click(o_stk)
         await o_stk.focus()
         await o_stk.fill(str(so_tai_khoan))
         
-        # Kiểm tra nếu fill chưa ăn thì gõ phím thật
+        # Kiểm tra nếu fill chưa ăn thì gõ phím cứng
         val = await o_stk.input_value()
-        if not val:
-            await page.keyboard.type(str(so_tai_khoan), delay=100)
-        
-        await asyncio.sleep(0.8)
+        if not val: await page.keyboard.type(str(so_tai_khoan), delay=100)
+        await asyncio.sleep(0.5)
 
-        # 2. TÌM NGÂN HÀNG
-        print(f"   -> Đang chọn ngân hàng: {ten_ngan_hang}")
-        o_tim = page.locator(selector_tim_nh).last
-        await smart_click(o_tim)
-        await o_tim.focus()
-        await o_tim.fill("") # Xóa sạch ô tìm kiếm
-        await page.keyboard.type(ten_ngan_hang, delay=100)
-        await asyncio.sleep(3.0) 
-
-
-        # 3. BẤM CHỌN NGÂN HÀNG — THỬ NHIỀU CHIẾN LƯỢC
-        item_ngan_hang = None
-        da_chon = False
-
-        # Chiến lược 1: Tìm chính xác bằng selector cấu hình + exact text
-        print(f"   🔍 Tìm '{ten_ngan_hang}' bằng selector: {selector_item_nh}")
-        try:
-            loc1 = page.locator(selector_item_nh).get_by_text(ten_ngan_hang, exact=True).last
-            if await loc1.is_visible(timeout=3000):
-                item_ngan_hang = loc1
-                print(f"   ✅ Tìm thấy (exact match)")
-        except:
-            pass
-
-        # Chiến lược 2: Tìm chứa text (không exact) — phòng trường hợp web thêm khoảng trắng
-        if not item_ngan_hang:
-            print(f"   🔍 Thử tìm (contains match)...")
+        # ====================================================
+        # BƯỚC 3: NHẬP CHI NHÁNH (Dành riêng hi144)
+        # ====================================================
+        if selector_chi_nhanh:
+            print("   -> 4. Đang nhập Chi nhánh...")
             try:
-                loc2 = page.locator(selector_item_nh).get_by_text(ten_ngan_hang, exact=False).last
-                if await loc2.is_visible(timeout=3000):
-                    item_ngan_hang = loc2
-                    print(f"   ✅ Tìm thấy (contains match)")
-            except:
-                pass
+                o_chi_nhanh = page.locator(selector_chi_nhanh).last
+                await smart_click(o_chi_nhanh)
+                await o_chi_nhanh.fill("Hà Nội") # Có thể thay bằng dữ liệu lấy từ DB
+                await asyncio.sleep(0.5)
+            except Exception as e:
+                print(f"      ⚠️ Lỗi nhập chi nhánh: {e}")
 
-        # Chiến lược 3: Tìm rộng hơn — bỏ qua selector class, tìm bất kỳ element chứa text
-        if not item_ngan_hang:
-            print(f"   🔍 Thử tìm rộng (any visible element)...")
-            try:
-                loc3 = page.get_by_text(ten_ngan_hang, exact=False).last
-                if await loc3.is_visible(timeout=3000):
-                    item_ngan_hang = loc3
-                    print(f"   ✅ Tìm thấy (broad match)")
-            except:
-                pass
-
-        # Nếu tìm được → scroll vào view rồi click
-        if item_ngan_hang:
-            print(f"   🎯 Đã thấy '{ten_ngan_hang}'. Đang cuộn vào view và chọn...")
-            # Scroll element vào viewport trước (mobile hay bị che)
-            await item_ngan_hang.scroll_into_view_if_needed()
-            await asyncio.sleep(0.5)
-            await smart_click(item_ngan_hang)
-            
-            # Kiểm tra xem dropdown đã đóng chưa (dấu hiệu chọn thành công)
-            await asyncio.sleep(1.5)
-            try:
-                still_visible = await page.locator(selector_item_nh).first.is_visible(timeout=2000)
-                if still_visible:
-                    # Dropdown vẫn mở → thử tap lại bằng JS
-                    print(f"   ⚠️ Dropdown vẫn mở, thử tap lại bằng JS...")
-                    await item_ngan_hang.evaluate("""node => {
-                        node.dispatchEvent(new PointerEvent('pointerdown', {bubbles: true}));
-                        node.dispatchEvent(new PointerEvent('pointerup', {bubbles: true}));
-                        node.dispatchEvent(new TouchEvent('touchstart', {bubbles: true}));
-                        node.dispatchEvent(new TouchEvent('touchend', {bubbles: true}));
-                        node.click();
-                    }""")
-                    await asyncio.sleep(1.5)
-            except:
-                pass  # Dropdown đã đóng → OK
-            
-            da_chon = True
-            print(f"   => Đã chọn xong: {ten_ngan_hang}")
-        else:
-            print(f"   ❌ Không tìm thấy '{ten_ngan_hang}' trong danh sách!")
-            # Debug: In ra tất cả các option đang hiện
-            try:
-                all_items = page.locator(selector_item_nh)
-                count = await all_items.count()
-                print(f"   📋 Số lượng item hiện tại: {count}")
-                for i in range(min(count, 5)):
-                    txt = await all_items.nth(i).inner_text()
-                    print(f"      [{i}] {txt}")
-            except:
-                pass
-            return False
-
-        if not da_chon:
-            return False
-
-        # 4. BẤM XÁC NHẬN
+        # ====================================================
+        # BƯỚC 4: BẤM XÁC NHẬN LƯU THẺ
         print("   -> Bấm Xác Nhận lưu form...")
         btn_xn = page.locator(selector_luu).last
         await smart_click(btn_xn)
@@ -487,45 +653,126 @@ async def dien_thong_tin_ngan_hang(page, so_tai_khoan, ten_ngan_hang, cfg):
     except Exception as e:
         print(f"❌ Lỗi điền form Ngân hàng: {e}")
         return False
-     
+
 
 import threading
+import ddddocr
 
 # Tạo một "khóa" chung để các luồng xếp hàng giải Captcha, tránh xung đột
 ocr_lock = threading.Lock()
 ocr = ddddocr.DdddOcr(show_ad=False)
+
 async def xu_ly_captcha(page, cfg):
-
-    anh_selector = cfg.get("anh_captcha")
+    anh_selector = cfg.get("anh_captcha") # Lưu ý: Key này phải đồng nhất với file config (anh_captcha)
     input_selector = cfg.get("input_captcha")
-    print("Bắt đầu xử lý Captcha...")
-    if anh_selector and input_selector:
-        print("🔍 Phát hiện cấu hình Captcha, đang tiến hành giải...")
-        try:
-            # 1. Tìm ô nhập và ÉP CỨNG FOCUS vào đó
-            o_nhap = page.locator(cfg["input_captcha"])
-            await o_nhap.focus()
-            
-            # Dừng lại 1.5 giây để đợi web load và hiển thị cái ảnh captcha ra
-            await page.wait_for_timeout(1500)
-            
-            # 2. Chụp lén cái ảnh (trong khi con trỏ chuột vẫn đang nhấp nháy ở ô nhập)
-            anh_element = page.locator(cfg["anh_captcha"])
-            image_bytes = await anh_element.screenshot()
-            
-            # 3. Đưa ảnh cho mắt thần ddddocr đọc
-            with ocr_lock:
-                text_captcha = ocr.classification(image_bytes)
-            print(f"🤖 Đã giải mã được mã Captcha: {text_captcha}")
-            
-            # 4. Gõ kết quả vào ô (Dùng .type để gõ từng phím, không làm mất focus)
-            # Chú ý: Tuyệt đối không dùng .fill() ở đây
-            await o_nhap.type(text_captcha, delay=100)
-            print("Đã nhập xong Captcha!")
-            
-        except Exception as e:
-            print(f"Lỗi khi xử lý captcha: {e}")
+    
+    if not (anh_selector and input_selector):
+        return True # Nếu không có cấu hình thì coi như không cần giải -> Pass
 
+    print("🔍 Bắt đầu xử lý Captcha số...")
+    try:
+        # 1. Tìm ô nhập và ÉP CỨNG FOCUS vào đó
+        o_nhap = page.locator(input_selector).last
+        await o_nhap.focus()
+        await asyncio.sleep(2.5) 
+        
+        # [QUAN TRỌNG] Bôi đen và xóa sạch dữ liệu cũ (đề phòng đây là lần retry thứ 2, thứ 3)
+        await page.keyboard.press("Control+A")
+        await page.keyboard.press("Backspace")
+        
+        # Dừng lại 1.5 giây để đợi web load và hiển thị cái ảnh captcha ra
+        await page.wait_for_timeout(1500)
+        
+        # 2. Chụp lén cái ảnh
+        anh_element = page.locator(anh_selector).last
+        
+        # Đảm bảo ảnh đã hiện ra trước khi chụp
+        if not await anh_element.is_visible(timeout=3000):
+            print("❌ Không thấy ảnh Captcha xuất hiện!")
+            return False # Báo lỗi để vòng lặp thử lại
+            
+        image_bytes = await anh_element.screenshot()
+        
+        # 3. Đưa ảnh cho mắt thần ddddocr đọc
+        with ocr_lock:
+            text_captcha = ocr.classification(image_bytes)
+            
+        # Nếu AI không đọc ra được chữ nào (trả về chuỗi rỗng)
+        if not text_captcha:
+            print("❌ ddddocr không nhận diện được chữ nào!")
+            return False # Báo lỗi để vòng lặp click lấy ảnh khác
+            
+        print(f"🤖 Đã giải mã được mã Captcha: {text_captcha}")
+        
+        # 4. Gõ kết quả vào ô
+        await o_nhap.type(text_captcha, delay=100)
+        print("✅ Đã nhập xong Captcha!")
+        
+        return True # BÁO CÁO THÀNH CÔNG ĐỂ BÊN KIA THOÁT VÒNG LẶP
+        
+    except Exception as e:
+        print(f"❌ Lỗi khi xử lý captcha: {e}")
+        return False # BÁO LỖI ĐỂ CHẠY LẠI
+
+# async def xu_ly_captcha(page, cfg):
+#     anh_selector = cfg.get("anh_captcha")
+#     input_selector = cfg.get("input_captcha")
+    
+#     if not (anh_selector and input_selector):
+#         return True
+
+#     print("🔍 Bắt đầu xử lý Captcha số...")
+#     try:
+#         # 1. TÌM Ô NHẬP & CHUẨN BỊ
+#         o_nhap = page.locator(input_selector).last
+#         await o_nhap.scroll_into_view_if_needed()
+#         await o_nhap.click() # Click vào để kích hoạt focus
+        
+#         # Xóa dữ liệu cũ
+#         await page.keyboard.press("Control+A")
+#         await page.keyboard.press("Backspace")
+
+#         # 2. ĐỢI ẢNH HIỆN HÌNH (THAY ĐỔI QUAN TRỌNG TẠI ĐÂY)
+#         anh_element = page.locator(anh_selector).last
+        
+#         # Thay vì đợi 1.5s mù quáng, ta đợi cho đến khi nó THỰC SỰ xuất hiện trên màn hình
+#         try:
+#             await anh_element.wait_for(state="visible", timeout=5000)
+#             # Thêm 1 nhịp nghỉ ngắn 1s để chắc chắn nội dung ảnh đã render xong (chống chụp ra ảnh trắng)
+#             await asyncio.sleep(1) 
+#         except:
+#             print("❌ Quá 5s mà không thấy ảnh Captcha hiện ra!")
+#             return False
+
+#         # 3. CHỤP ẢNH & GIẢI MÃ
+#         # Tip: Đôi khi ảnh bị cache cũ, ta có thể click vào ảnh để lấy ảnh mới nếu cần
+#         # await anh_element.click() 
+#         # await asyncio.sleep(1)
+
+#         image_bytes = await anh_element.screenshot()
+        
+#         with ocr_lock:
+#             text_captcha = ocr.classification(image_bytes)
+            
+#         if not text_captcha:
+#             print("❌ AI không đọc được, đang click đổi ảnh khác...")
+#             await anh_element.click() # Click vào ảnh để web đổi mã mới
+#             return False 
+            
+#         print(f"🤖 Captcha: {text_captcha}")
+        
+#         # 4. NHẬP TỪNG CHỮ (MÔ PHỎNG NGƯỜI THẬT)
+#         # Không dùng .type vì nó quá nhanh, dùng keyboard.type với delay
+#         await o_nhap.focus()
+#         for char in text_captcha:
+#             await page.keyboard.type(char, delay=random.randint(150, 300))
+            
+#         print("✅ Đã nhập xong Captcha!")
+#         return True 
+        
+#     except Exception as e:
+#         print(f"❌ Lỗi: {e}")
+#         return False
 
 import cv2
 import numpy as np
@@ -573,6 +820,7 @@ async def get_final_distance(page, cfg, gap_x_opencv, bg_path):
     
     print(f"📏 Web Width: {web_width} | Real Width: {real_width} | Ratio: {ratio}")
     return final_distance
+
 async def giai_captcha_keo_opencv(page, cfg):
         # 0. XÓA ẢNH CŨ
     # Tạo tên file tạm duy nhất cho luồng này để tránh xung đột đa luồng

@@ -38,7 +38,7 @@ class ToolApp(ctk.CTk):
         self.username = username
         self.session_token = session_token
         self.title(f"AQUA-REG DASHBOARD | {username}")
-        self.geometry("1300x800")
+        self.geometry("1500x800")
         self.configure(fg_color=BG_COLOR)
         
         self.config_cloud = db.lay_cau_hinh_tu_cloud()
@@ -71,9 +71,11 @@ class ToolApp(ctk.CTk):
         self.entry_bank = create_input_group("NGÂN HÀNG", "Tên viết tắt", 1, 0)
         self.entry_stk = create_input_group("SỐ TÀI KHOẢN", "STK nhận tiền", 1, 1)
         self.entry_rut = create_input_group("MẬT KHẨU RÚT", "PIN 6 số", 1, 2)
+        self.entry_chinhanh = create_input_group("CHI NHÁNH", "CHI NHÁNH", 1, 3)
+
 
         action_container = ctk.CTkFrame(self.header, fg_color="transparent")
-        action_container.grid(row=1, column=3, padx=15, pady=10, sticky="ew")
+        action_container.grid(row=2, column=0, padx=15, pady=10, sticky="ew")
         ctk.CTkLabel(action_container, text="PROFILE HIDEMIUM", font=("Arial", 11, "bold"), text_color=ACCENT_COLOR).pack(anchor="w")
         self.combo_hidemium = ctk.CTkComboBox(action_container, values=["Scanning..."], height=35, corner_radius=8, fg_color="#1C222D", border_color="#34495E")
         self.combo_hidemium.pack(side="left", fill="x", expand=True, pady=2)
@@ -266,6 +268,14 @@ class ToolApp(ctk.CTk):
                         # Sử dụng context mặc định đang có sẵn để chạy chung 1 cửa sổ (nhiều Tab)
                         if browser.contexts:
                             context = browser.contexts[0]
+                            await context.add_init_script("""
+                                Object.defineProperty(navigator, 'webdriver', {get: () => undefined});
+                                window.Element.prototype._addEventListener = window.Element.prototype.addEventListener;
+                                window.Element.prototype.addEventListener = function(a,b,c) {
+                                    if(a==='beforeunload') return;
+                                    this._addEventListener(a,b,c);
+                                };
+                            """)
                         else:
                             context = await browser.new_context()
                             

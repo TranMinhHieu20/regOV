@@ -1,6 +1,6 @@
 # --- TRONG FILE: flows.py ---
 import asyncio
-from CLIENT_TOOL.actions import bam_nut_dang_ky, don_dep_popup, kiem_tra_va_cho_captcha, bam_vao_tab_toi, bam_vao_rut_tien, cai_dat_mat_khau_rut_tien, tai_khoan_ngan_hang, xac_minh_mat_khau_truoc_khi_them, dien_thong_tin_ngan_hang, xu_ly_captcha, giai_captcha_keo_opencv, bam_vao_them_tai_khoan
+from CLIENT_TOOL.actions import bam_nut_dang_ky, don_dep_popup, kiem_tra_va_cho_captcha, bam_vao_tab_toi, bam_vao_rut_tien, cai_dat_mat_khau_rut_tien, tai_khoan_ngan_hang, xac_minh_mat_khau_truoc_khi_them, dien_thong_tin_ngan_hang, xu_ly_captcha, giai_captcha_keo_opencv, bam_vao_them_tai_khoan, smart_click
 
 async def run_full_flow(page, target_url, user_data, cfg, report_status=None, is_aborted=None):
     def update_status(msg):
@@ -18,7 +18,7 @@ async def run_full_flow(page, target_url, user_data, cfg, report_status=None, is
         
         update_status(f"Mở trang {target_url}...")
         print(f"🚀 Bắt đầu chạy: {target_url}")
-        await page.goto(target_url, timeout=30000)
+        await page.goto(target_url, timeout=40000)
         await page.wait_for_selector(cfg["input_username"], timeout=15000)
 
         # ==========================================
@@ -48,7 +48,42 @@ async def run_full_flow(page, target_url, user_data, cfg, report_status=None, is
                 print(f"📱 SĐT: Giữ nguyên {sdt_de_dien}")
             await page.type(cfg["input_phone"], sdt_de_dien)
 
-        await xu_ly_captcha(page, cfg)
+        # ==========================================
+        # BƯỚC: GIẢI CAPTCHA SỐ (TRƯỚC KHI BẤM ĐĂNG KÝ)
+        # ==========================================
+        if cfg.get("input_captcha"):
+            update_status("Đang xử lý Captcha số...")
+            max_retries = 3
+            da_giai_xong = False
+
+            for i in range(max_retries):
+                # Kiểm tra nếu người dùng bấm Dừng tool giữa chừng
+                if is_aborted and is_aborted(): return 
+
+                print(f"🔄 Thử giải Captcha lần {i+1}...")
+                
+                # Gọi hàm từ file actions mà chúng ta vừa nâng cấp
+                ket_qua = await xu_ly_captcha(page, cfg)
+                
+                if ket_qua is True:
+                    print("✅ Captcha đã được điền xong!")
+                    da_giai_xong = True
+                    break # Thoát vòng lặp thử lại, chuyển sang bấm nút
+                else:
+                    print(f"❌ Lần {i+1} lỗi (AI đọc sai hoặc web lag).")
+                    if i < max_retries - 1:
+                        # Bấm đổi ảnh khác để thử lại cho chắc ăn
+                        try:
+                            print("      -> Đang đổi ảnh Captcha mới...")
+                            await page.locator(cfg.get("anh_captcha")).click()
+                            await asyncio.sleep(1.5) # Đợi ảnh mới load
+                        except:
+                            pass
+            
+            if not da_giai_xong:
+                print("🚨 Thử 3 lần đều thất bại. Dừng luồng để bảo vệ tài khoản!")
+                update_status("Lỗi: Không giải được Captcha số")
+                return False
             
         # ==========================================
         # 2. GỌI HÀM BẤM NÚT ĐĂNG KÝ
@@ -57,6 +92,7 @@ async def run_full_flow(page, target_url, user_data, cfg, report_status=None, is
         update_status("Chuẩn bị bấm Đăng ký...")
         print("\n--- BẮT ĐẦU QUÁ TRÌNH BẤM ĐĂNG KÝ ---")
         thanh_cong = await bam_nut_dang_ky(page, cfg["nut_dangky"])
+
         
         if not thanh_cong:
             return 
@@ -92,12 +128,13 @@ async def run_full_flow(page, target_url, user_data, cfg, report_status=None, is
                 print("🚨 Đã thử 3 lần nhưng không qua được Captcha. Dừng flow!")
                 return # Thoát ra nếu thử hết số lần mà vẫn lỗi
 
-        # 3.2. Nếu là Captcha chữ/số (OCR) - giữ nguyên
-        if cfg.get("input_captcha"):
-            update_status("Phát hiện Captcha. Đang chờ giải...")
+       # 3.2. Nếu là Captcha chờ thủ công (Trường hợp web có loại captcha lạ)
+        # Sửa lại thành kiểm tra cờ 'captcha_thu_cong' thay vì 'input_captcha'
+        if cfg.get("captcha_thu_cong"):
+            update_status("Phát hiện Captcha lạ. Đang chờ giải thủ công...")
             tiep_tuc = await kiem_tra_va_cho_captcha(page) 
             if not tiep_tuc:
-               return 
+               return
         # ==========================================
         # 4. GỌI HÀM QUÉT POPUP
         # ==========================================
@@ -129,68 +166,148 @@ async def run_full_flow(page, target_url, user_data, cfg, report_status=None, is
             await asyncio.sleep(1)
         
         # ==========================================
-        # 7. CÀI ĐẶT MẬT KHẨU RÚT TIỀN (MỚI)
+        # 7. CÀI ĐẶT MẬT KHẨU RÚT TIỀN (MỚI - ĐÃ NÂNG CẤP)
         # ==========================================
         if is_aborted and is_aborted(): return
         if vao_rut_tien_thanh_cong:
             update_status("Cài đặt MK Rút Tiền...")
             print("\n--- BƯỚC 7: CÀI ĐẶT MẬT KHẨU RÚT TIỀN ---")
+
+           # 7.1. KIỂM TRA NÚT "CÀI ĐẶT" (Bản sửa lỗi đặc trị mạng lag)
+            selector_cai_dat = cfg.get("nut_cai_dat")
+            if selector_cai_dat:
+                try:
+                    # Tìm locator
+                    nut_cai_dat_locator = page.locator(selector_cai_dat).first
+                    
+                    # 1. Đợi nó xuất hiện trong cấu trúc code trước (bất kể ẩn hiện)
+                    await nut_cai_dat_locator.wait_for(state="attached", timeout=60000)
+                    
+                    # 2. Cuộn tới nó (giúp kích hoạt trạng thái visible trên nhiều web)
+                    await nut_cai_dat_locator.scroll_into_view_if_needed()
+                    
+                    # 3. Kiểm tra visible, nếu mạng quá lag mà không hiện thì dùng JS Click luôn
+                    if await nut_cai_dat_locator.is_visible(timeout=60000):
+                        print(f"   -> 🛠️ Bấm nút Cài đặt bằng smart_click...")
+                        await smart_click(nut_cai_dat_locator)
+                    else:
+                        print(f"   ⚠️ Nút chưa hiện nhưng đã có trong code, dùng JS Click cưỡng chế...")
+                        await nut_cai_dat_locator.evaluate("node => node.click()")
+                    
+                    # Đợi trang chuyển hướng
+                    await asyncio.sleep(2.5) 
+                    
+                except Exception as e:
+                    print(f"   ⚠️ Bỏ qua hoặc đã cài đặt: {e}")
+            # 7.2. GỌI HÀM ĐIỀN MẬT KHẨU
+            # Điểm khác biệt: Bây giờ ta truyền thẳng TẤT CẢ 'cfg' vào, 
+            # hàm bên actions.py sẽ tự biết bốc selector nào ra dùng.
             cai_dat_mat_khau_thanh_cong = await cai_dat_mat_khau_rut_tien(
                 page, 
-                mat_khau=user_data['pin_bank'], # Bạn có thể đổi MK ở đây
-                selector_o_nhap=cfg.get("o_nhap_pass_rut"),
-                selector_xac_nhan=cfg.get("nut_xacnhan_pass_rut")
+                mat_khau=user_data['pin_bank'],
+                cfg=cfg # TRUYỀN CFG VÀO ĐÂY LÀ ĐỦ
             )
+            
         await asyncio.sleep(1)
 
-        # ==========================================
-        # 8. BẤM VÀO THÊM TÀI KHOẢN (MỚI)
-        # ==========================================
-        if cai_dat_mat_khau_thanh_cong:
-            update_status("Mở form thêm thẻ Ngân hàng...")
-            print("\n--- BƯỚC 8: THÊM TÀI KHOẢN ---")
-            await asyncio.sleep(1)
-            da_bam_them = await bam_vao_them_tai_khoan(page, cfg.get("nut_them_tai_khoan"))
+        # # ==========================================
+        # # 8. BẤM VÀO THÊM TÀI KHOẢN (MỚI)
+        # # ==========================================
+        # if cai_dat_mat_khau_thanh_cong:
+        #     update_status("Mở form thêm thẻ Ngân hàng...")
+        #     print("\n--- BƯỚC 8: THÊM TÀI KHOẢN ---")
+        #     await asyncio.sleep(1)
+        #     da_bam_them = await bam_vao_them_tai_khoan(page, cfg.get("nut_them_tai_khoan"))
 
 
-        # ==========================================
-        # 9. CHỌN TÀI KHOẢN NGÂN HÀNG (MỚI)
-        # ==========================================
-        if da_bam_them:
-            print("\n--- BƯỚC 9: THÊM TÀI KHOẢN NGÂN HÀNG ---")
-            da_chon_loai = await tai_khoan_ngan_hang(page, cfg.get("nut_tai_khoan_ngan_hang"))
+        # # ==========================================
+        # # 9. CHỌN TÀI KHOẢN NGÂN HÀNG (MỚI)
+        # # ==========================================
+        # if da_bam_them:
+        #     print("\n--- BƯỚC 9: THÊM TÀI KHOẢN NGÂN HÀNG ---")
+        #     da_chon_loai = await tai_khoan_ngan_hang(page, cfg.get("nut_tai_khoan_ngan_hang"))
             
-        # ==========================================
-        # 10 XÁC MINH MẬT KHẨU (BƯỚC BẠN VỪA NÓI)
-        # ==========================================
-        if is_aborted and is_aborted(): return
-        if da_chon_loai:
-            update_status("Xác minh MK trước khi thêm thẻ...")
-            print("\n--- BƯỚC 10: NHẬP LẠI MẬT KHẨU RÚT TIỀN ---")
-            da_xac_minh = await xac_minh_mat_khau_truoc_khi_them(
-            page, 
-            mat_khau=user_data['pin_bank'], 
-            selector_o_nhap=cfg.get("o_nhap_pass_xac_minh"),
-            selector_xac_nhan=cfg.get("nut_xac_nhan_verify")
-            )     
+        # # ==========================================
+        # # 10 XÁC MINH MẬT KHẨU (BƯỚC BẠN VỪA NÓI)
+        # # ==========================================
+        # if is_aborted and is_aborted(): return
+        # if da_chon_loai:
+        #     update_status("Xác minh MK trước khi thêm thẻ...")
+        #     print("\n--- BƯỚC 10: NHẬP LẠI MẬT KHẨU RÚT TIỀN ---")
+        #     da_xac_minh = await xac_minh_mat_khau_truoc_khi_them(
+        #     page, 
+        #     mat_khau=user_data['pin_bank'], 
+        #     selector_o_nhap=cfg.get("o_nhap_pass_xac_minh"),
+        #     selector_xac_nhan=cfg.get("nut_xac_nhan_verify")
+        #     )     
                 
+        # # ==========================================
+        # # 11 XÁC NHẬN TÀI KHOẢN NGÂN HÀNG (BƯỚC BẠN VỪA NÓI)
+        # # ==========================================
+        # if is_aborted and is_aborted(): return
+        # if da_xac_minh:
+        #     update_status("Đang nhập STK Ngân Hàng...")
+        #     print("\n--- BƯỚC 11: ĐIỀN FORM NGÂN HÀNG ---")
+        #     thanh_cong = await dien_thong_tin_ngan_hang(
+        #         page, 
+        #         so_tai_khoan=user_data['stk_bank'], 
+        #         ten_ngan_hang=user_data['ten_bank'], 
+        #         cfg=cfg
+        #     )
+            
+        # if thanh_cong:
+        #     print(f"✅ THÀNH CÔNG: Đã thêm thẻ {user_data['ten_bank']} cho acc này!")
+        #     return True
         # ==========================================
-        # 11 XÁC NHẬN TÀI KHOẢN NGÂN HÀNG (BƯỚC BẠN VỪA NÓI)
+        # 8, 9, 10: CÁC BƯỚC TRUNG GIAN (Chỉ chạy nếu có cấu hình)
+        # ==========================================
+        san_sang_dien_bank = False # Cờ xác nhận đã đến được form bank
+
+        if cai_dat_mat_khau_thanh_cong:
+            # KIỂM TRA: Nếu trang có nút "Thêm tài khoản" (kiểu c168)
+            if cfg.get("nut_them_tai_khoan"):
+                update_status("Mở form thêm thẻ Ngân hàng...")
+                print("\n--- BƯỚC 8: THÊM TÀI KHOẢN (Kiểu c168) ---")
+                da_bam_them = await bam_vao_them_tai_khoan(page, cfg.get("nut_them_tai_khoan"))
+                
+                if da_bam_them:
+                    print("\n--- BƯỚC 9: CHỌN LOẠI THẺ ---")
+                    da_chon_loai = await tai_khoan_ngan_hang(page, cfg.get("nut_tai_khoan_ngan_hang"))
+                    
+                    if da_chon_loai:
+                        # Kiểm tra xem có cần xác minh mật khẩu lại không
+                        if cfg.get("o_nhap_pass_xac_minh"):
+                            print("\n--- BƯỚC 10: XÁC MINH MẬT KHẨU ---")
+                            san_sang_dien_bank = await xac_minh_mat_khau_truoc_khi_them(
+                                page, 
+                                mat_khau=user_data['pin_bank'], 
+                                selector_o_nhap=cfg.get("o_nhap_pass_xac_minh"),
+                                selector_xac_nhan=cfg.get("nut_xac_nhan_verify")
+                            )
+                        else:
+                            san_sang_dien_bank = True
+            else:
+                # Nếu KHÔNG CÓ nút "Thêm tài khoản" (kiểu hi144)
+                print("\n⏩ Trang này vào thẳng Form Bank, bỏ qua bước 8, 9, 10.")
+                san_sang_dien_bank = True
+
+        # ==========================================
+        # 11. XÁC NHẬN TÀI KHOẢN NGÂN HÀNG (DÙNG CHUNG)
         # ==========================================
         if is_aborted and is_aborted(): return
-        if da_xac_minh:
+        if san_sang_dien_bank:
             update_status("Đang nhập STK Ngân Hàng...")
             print("\n--- BƯỚC 11: ĐIỀN FORM NGÂN HÀNG ---")
             thanh_cong = await dien_thong_tin_ngan_hang(
                 page, 
                 so_tai_khoan=user_data['stk_bank'], 
                 ten_ngan_hang=user_data['ten_bank'], 
-                cfg=cfg
+                cfg=cfg # Truyền cả cfg để hàm tự lấy 'chi_nhanh'
             )
             
-        if thanh_cong:
-            print(f"✅ THÀNH CÔNG: Đã thêm thẻ {user_data['ten_bank']} cho acc này!")
-            return True
+            if thanh_cong:
+                print(f"✅ THÀNH CÔNG: Đã thêm thẻ {user_data['ten_bank']}!")
+                return True
 
         # ==========================================
         # KẾT THÚC LUỒNG

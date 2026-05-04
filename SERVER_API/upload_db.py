@@ -108,6 +108,7 @@ WEB_CONFIG = {
         "input_captcha": "input[placeholder*='Vui lòng nhập mã xác minh']",
         "anh_captcha": "img.absolute.right-7.top-1",
         "nut_dangky": "span[translate='Login_RegisterBtn']",
+        "xac_nhan":"button:has-text('xác nhận')",
         "nut_dong_popup": [".ui-dialog-close-box__icon", 
             ".ui-dialog-close",
             ".close-icon", 
@@ -121,16 +122,17 @@ WEB_CONFIG = {
             "button:has-text('Tôi Biết Rồi')",
         ],
         "nut_toi": "span:text-is('TÀI KHỎAN')",
-        "nut_rut_tien": "span:text-is('Rút Tiền')",
-        "nut_cai_dat": "span:text-is('Mật khẩu rút tiền chưa cài đặt, vui lòng cài đặt mật khẩu rút tiền trước (chọn vào đây để cài đặt)')",
+        "nut_rut_tien": "a:has(span:has-text('Rút Tiền'))",
+        "nut_cai_dat": "a:has(span:has-text('Mật khẩu rút tiền chưa cài đặt, vui lòng cài đặt mật khẩu rút tiền trước (chọn vào đây để cài đặt)'))",
         "o_nhap_pass_rut": "input[formcontrolname='newPassword']",
         "o_nhap_xac_nhan_pass_rut":"input[formcontrolname='confirm']",
         "nut_xacnhan_pass_rut": "span:has-text('Gửi đi')",
-        "input_stk": "input[formcontrolname:('account')]", 
-        "input_tim_ngan_hang": "input[placeholder*='Chọn ngân hàng phát hành']", # Đổi sang tìm ô Search
-        "item_ngan_hang": ".ui-options__option",
-        "chi_nhanh": "input[formcontrolname:('city')]",
-        "nut_luu_ngan_hang": "button:has-text('Xác Nhận')"
+        "input_stk": "input[formcontrolname='account']", 
+        "input_tim_ngan_hang": "mat-label:has-text('Vui lòng chọn ngân hàng')", # Đổi sang tìm ô Search
+        "input_ten_ngan_hang": "input[placeholder*='Vui lòng chọn ngân hàng']",
+        "item_ngan_hang": "mat-option",
+        "chi_nhanh": "input[formcontrolname='city']",
+        "nut_luu_ngan_hang": "button:has-text('Gửi đi')"
             
     },
     "www.qq8894.com": {
@@ -148,9 +150,23 @@ WEB_CONFIG = {
             "[aria-label*='close' i]",
             "i[class*='close']", 
             "span:has-text('Đóng')",
-            "i.fa-times-circle",                 # Bắt thẳng vào cái icon chữ X
+            "i.fa-times-circle",
+            "div.close-btn",
+            "div.deposit-guide-close",                 # Bắt thẳng vào cái icon chữ X
             "button[ng-click*='$ctrl.ok']",      # Bắt vào sự kiện click tắt của Angular
-            ".modal-content button.btn-link"]
+            ".modal-content button.btn-link"],
+        "nut_toi": "span:text-is('Tài Khoản')",
+        "nut_rut_tien": "span:text-is('Rút Tiền')",
+        "nut_cai_dat": "div.withdraw-bkdbtn",
+        "o_nhap_pass_rut": "input[formcontrolname='newPassword']",
+        "o_nhap_xac_nhan_pass_rut":"input[formcontrolname='confirm']",
+        "nut_xacnhan_pass_rut": "span:has-text('Gửi đi')",
+        "input_stk": "input[formcontrolname='account']", 
+        "input_tim_ngan_hang": "mat-label:has-text('Vui lòng chọn ngân hàng')", # Đổi sang tìm ô Search
+        "input_ten_ngan_hang": "input[placeholder*='Vui lòng chọn ngân hàng']",
+        "item_ngan_hang": "mat-option",
+        "chi_nhanh": "input[formcontrolname='city']",
+        "nut_luu_ngan_hang": "button:has-text('Gửi đi')"
             
     },
     "m.new8826.xyz": {
@@ -166,12 +182,29 @@ WEB_CONFIG = {
             "[aria-label*='close' i]",
             "i[class*='close']", 
             "button:has-text('Đóng')",
-            "span:has-text('x')",
-            "span:has-text('X')",
+            "mat-dialog-container span:has-text('x')",
+            "mat-dialog-container span:has-text('X')",
             "i.fa-times-circle",                 # Bắt thẳng vào cái icon chữ X
             "button[ng-click*='$ctrl.ok']",      # Bắt vào sự kiện click tắt của Angular
-            ".modal-content button.btn-link"]
-            
+            ".modal-content button.btn-link",
+            "mat-dialog-container button:has-text('Đóng')",
+            "button[translate='Common_Closed']",
+            ".text-right.ng-star-inserted button",
+            "button.mt-4.rounded-\\[4px\\]",
+            "button:has-text('ĐÓNG')"
+            ],
+        "nut_toi": "span:text-is('Tài Khoản')",
+        "nut_rut_tien": "a:has(span:has-text('Rút Tiền'))",
+        "nut_cai_dat": "a:has(span:has-text('Mật khẩu rút tiền chưa cài đặt, vui lòng cài đặt mật khẩu rút tiền trước (chọn vào đây để cài đặt)'))",
+        "o_nhap_pass_rut": "input[formcontrolname='newPassword']",
+        "o_nhap_xac_nhan_pass_rut":"input[formcontrolname='confirm']",
+        "nut_xacnhan_pass_rut": "span:has-text('Gửi đi')",
+        "input_stk": "input[formcontrolname='account']", 
+        "input_tim_ngan_hang": "mat-label:has-text('Vui lòng chọn ngân hàng')", # Đổi sang tìm ô Search
+        "input_ten_ngan_hang": "input[placeholder*='Vui lòng chọn ngân hàng']",
+        "item_ngan_hang": "mat-option",
+        "chi_nhanh": "input[formcontrolname='city']",
+        "nut_luu_ngan_hang": "button:has-text('Gửi đi')"
     },
     "m.f8betf.cool": {
         "input_username": "input[formcontrolname='account']",
@@ -186,23 +219,29 @@ WEB_CONFIG = {
             "[aria-label*='close' i]",
             "i[class*='close']", 
             "button:has-text('Đóng')",
-            "span:has-text('x')",
-            "span:has-text('X')",
+            "mat-dialog-container span:has-text('x')",
+            "mat-dialog-container span:has-text('X')",
             "i.fa-times-circle",                 # Bắt thẳng vào cái icon chữ X
             "button[ng-click*='$ctrl.ok']",      # Bắt vào sự kiện click tắt của Angular
-            ".modal-content button.btn-link"],
-        "nut_toi": "span:text-is('Tôi')",
-        "nut_rut_tien": "p:text-is('Rút Tiền')",
-        "o_nhap_pass_rut": ".ui-password-input__security.hairline--surround",
-        "nut_xacnhan_pass_rut": "button:has-text('Xác Nhận')",
-        "nut_them_tai_khoan": "span:text-is('Thêm Tài Khoản')",
-        "nut_tai_khoan_ngan_hang": "p:text-is('Tài khoản ngân hàng')",
-        "o_nhap_pass_xac_minh": ".ui-password-input__security.hairline--surround", # Selector ô nhập pass hiện ra sau khi chọn Loại Ngân hàng
-        "nut_xac_nhan_verify": "span:text-is('Tiếp Theo')",
-        "input_stk": "input[placeholder*='Vui lòng nhập số tài khoản ngân hàng']", 
-        "input_tim_ngan_hang": "input[placeholder*='Chọn ngân hàng phát hành']", # Đổi sang tìm ô Search
-        "item_ngan_hang": ".ui-options__option",
-        "nut_luu_ngan_hang": "button:has-text('Xác Nhận')"
+            ".modal-content button.btn-link",
+            "mat-dialog-container button:has-text('Đóng')",
+            "button[translate='Common_Closed']",
+            ".text-right.ng-star-inserted button",
+            "button.mt-4.rounded-\\[4px\\]",
+            "button:has-text('ĐÓNG')"
+            ],
+        "nut_toi": "span:text-is('Tài khoản')",
+        "nut_rut_tien": "a:has(span:has-text('Rút Tiền'))",
+        "nut_cai_dat": "a:has(span:has-text('Mật khẩu rút tiền chưa cài đặt, vui lòng cài đặt mật khẩu rút tiền trước (chọn vào đây để cài đặt)'))",
+        "o_nhap_pass_rut": "input[formcontrolname='newPassword']",
+        "o_nhap_xac_nhan_pass_rut":"input[formcontrolname='confirm']",
+        "nut_xacnhan_pass_rut": "span:has-text('Gửi đi')",
+        "input_stk": "input[formcontrolname='account']", 
+        "input_tim_ngan_hang": "mat-label:has-text('Vui lòng chọn ngân hàng')", # Đổi sang tìm ô Search
+        "input_ten_ngan_hang": "input[placeholder*='Vui lòng chọn ngân hàng']",
+        "item_ngan_hang": "mat-option",
+        "chi_nhanh": "input[formcontrolname='city']",
+        "nut_luu_ngan_hang": "button:has-text('Gửi đi')"
     },
     "default": {
         "input_username": "input[type='text']",
