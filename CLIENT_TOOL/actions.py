@@ -282,9 +282,10 @@ async def bam_vao_rut_tien(page, selector_rut_tien):
 #         print(f"❌ Lỗi cài mật khẩu rút tiền: {e}")
 #         return False
 
-async def cai_dat_mat_khau_rut_tien(page, mat_khau, cfg):
+async def cai_dat_mat_khau_rut_tien(page, mat_khau, cfg, pass_dang_ky=None):
     selector_1 = cfg.get("o_nhap_pass_rut", 'ul.ui-password-input__security.hairline--surround')
     selector_2 = cfg.get("o_nhap_xac_nhan_pass_rut") 
+    selector_nhap_lai = cfg.get("o_nhap_lai_pass")
     selector_xac_nhan = cfg.get("nut_xacnhan_pass_rut", "button:has-text('Xác Nhận'), span:has-text('Gửi đi')")
 
     print(f"🔐 Đang thiết lập mật khẩu rút tiền: {mat_khau}")
@@ -322,8 +323,37 @@ async def cai_dat_mat_khau_rut_tien(page, mat_khau, cfg):
         except Exception as e:
             print(f"      ❌ Lỗi khi nhập {label}: {e}")
             raise e
+    async def thuc_hien_nhap_lieu(target_box, noi_dung, label=""):
+        try:
+            await target_box.wait_for(state="visible", timeout=15000)
+            await target_box.scroll_into_view_if_needed()
+            await target_box.evaluate("node => node.focus()")
+            await asyncio.sleep(0.5)
+            
+            # Kiểm tra xem có bàn phím ảo không
+            ban_phim_ao = page.locator('.van-keypad, [class*="keyboard"], .number-board').filter(visible=True).first
+            
+            if await ban_phim_ao.is_visible(timeout=1000):
+                print(f" ⌨️ Gõ bàn phím ảo cho {label}...")
+                for so in noi_dung:
+                    await smart_click(ban_phim_ao.get_by_text(so, exact=True).first)
+                    await asyncio.sleep(0.2)
+            else:
+                print(f" ⌨️ Gõ phím thật vào {label}...")
+                await target_box.fill("") # Xóa cũ nếu có
+                await target_box.type(str(noi_dung), delay=100)
+                    
+            await asyncio.sleep(0.8)
+        except Exception as e:
+            print(f" ❌ Lỗi nhập {label}: {e}")
 
     try:
+
+        # --- BƯỚC MỚI: NHẬP LẠI MẬT KHẨU ĐĂNG KÝ (Chỉ chạy nếu trang web yêu cầu) ---
+        if selector_nhap_lai and pass_dang_ky:
+            print(" 🛡️ Phát hiện layout yêu cầu xác nhận mật khẩu đăng ký...")
+            o_xac_nhan_pass = page.locator(selector_nhap_lai).first
+            await thuc_hien_nhap_lieu(o_xac_nhan_pass, pass_dang_ky, "Mật khẩu đăng ký")
         # --- XỬ LÝ RIÊNG CHO HI144 ---
         if selector_2:
             print(" 🔄 Chế độ 2 ô selector riêng biệt (hi144)...")
@@ -879,48 +909,66 @@ async def giai_captcha_keo_opencv(page, cfg):
         is_mobile = await page.evaluate("() => 'ontouchstart' in window || navigator.maxTouchPoints > 0")
         
         if is_mobile:
-            print("📱 Chế độ Mobile: Dùng Touch Events để kéo...")
-            # Tạo các mốc di chuyển mô phỏng tay người
+            print("📱 Chế độ Mobile: Dùng Touch/Pointer Events để kéo...")
             steps = []
-            for i in range(1, 11):
-                t = i / 10
+            for i in range(1, 21):
+                t = i / 20
                 move_ratio = 1 - (1 - t) ** 3
                 steps.append({
                     'x': start_x + (distance * move_ratio),
                     'y': start_y + random.uniform(-2, 2)
                 })
 
-            # Sử dụng JS để dispatch touch events chính xác cho mobile emulation
+            # Sử dụng JS để dispatch touch và pointer events đồng thời
             await page.evaluate(f"""
                 async ({{selector, steps, startX, startY}}) => {{
                     const el = document.querySelector(selector);
                     if (!el) return;
 
-                    const createTouch = (x, y) => new Touch({{
-                        identifier: Date.now(),
-                        target: el,
-                        clientX: x,
-                        clientY: y,
-                        pageX: x,
-                        pageY: y,
-                    }});
-
+                    const touchId = Date.now(); // ID cố định cho cả phiên kéo
+                    
                     const dispatch = (type, x, y) => {{
-                        const touch = createTouch(x, y);
-                        el.dispatchEvent(new TouchEvent(type, {{
-                            cancelable: true,
-                            bubbles: true,
-                            touches: [touch],
-                            targetTouches: [touch],
-                            changedTouches: [touch]
-                        }}));
+                        const touch = new Touch({{
+                            identifier: touchId,
+                            target: el,
+                            clientX: x,
+                            clientY: y,
+                            pageX: x,
+                            pageY: y,
+                        }});
+
+                        // Gửi cả Touch và Pointer Events để chắc chắn web nhận được
+                        const commonParams = {{ 
+                            bubbles: true, cancelable: true, 
+                            clientX: x, clientY: y, 
+                            screenX: x, screenY: y,
+                            pointerId: 1, pointerType: 'touch', isPrimary: true
+                        }};
+
+                        if (type.startsWith('touch')) {{
+                            el.dispatchEvent(new TouchEvent(type, {{
+                                ...commonParams,
+                                touches: [touch],
+                                targetTouches: [touch],
+                                changedTouches: [touch]
+                            }}));
+                        }} else {{
+                            el.dispatchEvent(new PointerEvent(type, commonParams));
+                        }}
                     }};
 
+                    // Trình tự: PointerDown -> TouchStart
+                    dispatch('pointerdown', startX, startY);
                     dispatch('touchstart', startX, startY);
+                    
                     for (const step of steps) {{
-                        await new Promise(r => setTimeout(r, 20 + Math.random() * 30));
+                        await new Promise(r => setTimeout(r, 15 + Math.random() * 20));
+                        dispatch('pointermove', step.x, step.y);
                         dispatch('touchmove', step.x, step.y);
                     }}
+                    
+                    // Trình tự: PointerUp -> TouchEnd
+                    dispatch('pointerup', steps[steps.length-1].x, steps[steps.length-1].y);
                     dispatch('touchend', steps[steps.length-1].x, steps[steps.length-1].y);
                 }}
             """, {
@@ -930,27 +978,28 @@ async def giai_captcha_keo_opencv(page, cfg):
                 'startY': start_y
             })
         else:
-            print("💻 Chế độ Desktop: Dùng Mouse Events để kéo...")
+            print("💻 Chế độ Desktop: Kéo bằng Mouse (Human-like)...")
             await page.mouse.move(start_x, start_y)
             await page.mouse.down()
-            await asyncio.sleep(0.3)
+            await asyncio.sleep(0.2)
 
-            steps = 50
+            # Chia nhỏ quãng đường kéo để mượt hơn
+            steps = 40
             for i in range(1, steps + 1):
                 t = i / steps
-                move_ratio = 1 - (1 - t) ** 3 # Ease Out
-                current_x = start_x + (distance * move_ratio)
-                current_y = start_y + random.uniform(-1, 1)
+                # Công thức Ease-Out để kéo chậm dần khi về đích
+                move_ratio = 1 - (1 - t) ** 3 
+                curr_x = start_x + (distance * move_ratio)
+                curr_y = start_y + random.uniform(-1, 1)
                 
-                await page.mouse.move(current_x, current_y, steps=1)
-                if i % 10 == 0:
-                    await asyncio.sleep(0.01)
+                await page.mouse.move(curr_x, curr_y, steps=1)
+                if i % 8 == 0: await asyncio.sleep(0.01)
 
-            await asyncio.sleep(0.5) 
+            await asyncio.sleep(0.4) 
             await page.mouse.up() 
         
         print("🖱️ Đã kéo xong, đang đợi kiểm tra kết quả...")
-        await asyncio.sleep(4.0) # Đợi web check kết quả
+        await asyncio.sleep(3.5) 
 
         #7. KIỂM TRA THỰC TẾ
         is_still_visible = await page.locator(bg_selector).is_visible(timeout=3000)

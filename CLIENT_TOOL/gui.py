@@ -16,13 +16,21 @@ from CLIENT_TOOL import flows
 from path_helper import get_data_path
 
 DOMAIN_MAP = {
-    "hi": "https://hi1444.com/Register",
-    "qq": "https://www.qq8894.com/register",
-    "new": "https://m.new8826.xyz/Account/Register",
+    "hi144": "https://hi1444.com/Register",
+    "qq88": "https://www.qq8894.com/register",
+    "new88": "https://m.new8826.xyz/Account/Register",
     "f168": "https://f1686s.com/home/register",
     "c168": "https://c168a.vip/home/register",
     "sc88": "https://m.sc8888.com/home/register",
     "f8": "https://m.f8betf.cool/Account/Register",
+    "mb66": "https://m.mb667.pro/Account/Register",
+    "shbet": "https://m.shbetv9.top/Account/Register",
+    "j88": "https://m.j855.xyz/Account/Register",
+    "u888": "https://m.u8889.ink/Account/Register",
+    "789bet": "https://m.vip789betj.com/Account/Register",
+    "78win": "https://www.78wina1.ltd/signup",
+    "junv1":"",
+    "junv2":""
 }
 
 # --- PREMIUM COLORS ---
@@ -72,6 +80,7 @@ class ToolApp(ctk.CTk):
         self.entry_stk = create_input_group("SỐ TÀI KHOẢN", "STK nhận tiền", 1, 1)
         self.entry_rut = create_input_group("MẬT KHẨU RÚT", "PIN 6 số", 1, 2)
         self.entry_chinhanh = create_input_group("CHI NHÁNH", "CHI NHÁNH", 1, 3)
+        self.entry_email = create_input_group("EMAIL", "Nhập email (nếu có)", 2, 1)
 
 
         action_container = ctk.CTkFrame(self.header, fg_color="transparent")
@@ -83,14 +92,49 @@ class ToolApp(ctk.CTk):
 
         self.ctrl_bar = ctk.CTkFrame(self, fg_color="transparent")
         self.ctrl_bar.grid(row=2, column=0, sticky="ew", padx=20, pady=10)
-        self.sites_frame = ctk.CTkFrame(self.ctrl_bar, fg_color="#151921", corner_radius=10, border_width=1, border_color="#2C3440")
-        self.sites_frame.pack(side="left", padx=5, fill="y")
-        ctk.CTkLabel(self.sites_frame, text=" MỤC TIÊU: ", font=("Arial", 11, "bold")).pack(side="left", padx=10)
+        
+        # --- SITES SELECTION AREA (RE-DESIGNED FOR PREMIUM LOOK) ---
+        self.sites_frame = ctk.CTkFrame(self.ctrl_bar, fg_color="#1A1F26", corner_radius=12, border_width=1, border_color="#34495E")
+        self.sites_frame.pack(side="left", padx=10, fill="both", expand=True)
+        
+        # Configure Grid Columns for perfect alignment
+        for i in range(4): self.sites_frame.grid_columnconfigure(i, weight=1, uniform="sites_cols")
+
+        # Header with Indicator
+        header_container = ctk.CTkFrame(self.sites_frame, fg_color="transparent")
+        header_container.grid(row=0, column=0, columnspan=4, sticky="ew", padx=15, pady=(10, 5))
+        
+        ctk.CTkLabel(header_container, text="● MỤC TIÊU VẬN HÀNH", font=("Arial", 12, "bold"), text_color=ACCENT_COLOR).pack(side="left")
+        
+        # SELECT ALL (Switch Style)
+        self.var_all = ctk.BooleanVar()
+        self.check_all = ctk.CTkCheckBox(header_container, text="CHỌN TẤT CẢ", variable=self.var_all, 
+                                         command=self.toggle_select_all, font=("Arial", 10, "bold"), 
+                                         text_color=SUCCESS_COLOR, checkbox_width=16, checkbox_height=16,
+                                         hover_color="#1C222D")
+        self.check_all.pack(side="right")
+
         self.sites_vars = {}
-        for site in DOMAIN_MAP.keys():
-            var = ctk.BooleanVar()
-            ctk.CTkCheckBox(self.sites_frame, text=site.upper(), variable=var, font=("Arial", 11), checkbox_width=18, checkbox_height=18, border_color=ACCENT_COLOR).pack(side="left", padx=10)
-            self.sites_vars[site] = var
+        
+        # Define Grid Matrix - 4 columns layout
+        matrix_sites = [
+            ["c168", "f168", "sc88", "f8", "junv1"],
+            ["hi144", "qq88", "new88", "mb66", "junv2"],
+            ["shbet", "j88", "u888", "789bet", "78win"],
+            
+        ]
+        
+        # Build the grid
+        for r_idx, row_sites in enumerate(matrix_sites):
+            for c_idx, site in enumerate(row_sites):
+                if site in DOMAIN_MAP:
+                    var = ctk.BooleanVar()
+                    cb = ctk.CTkCheckBox(self.sites_frame, text=site.upper(), variable=var, 
+                                         font=("Arial", 11, "bold"), text_color="#BDC3C7",
+                                         checkbox_width=18, checkbox_height=18, 
+                                         border_color=ACCENT_COLOR, hover_color="#2C3E50")
+                    cb.grid(row=r_idx + 1, column=c_idx, padx=15, pady=5, sticky="w")
+                    self.sites_vars[site] = var
 
         self.btn_run = ctk.CTkButton(self.ctrl_bar, text="🚀 BẮT ĐẦU CHẠY", fg_color=ACCENT_COLOR, hover_color="#00B4DB", height=40, font=("Arial", 13, "bold"), text_color="black", command=self.add_task)
         self.btn_run.pack(side="left", padx=10)
@@ -100,8 +144,8 @@ class ToolApp(ctk.CTk):
         self.table_scroll = ctk.CTkScrollableFrame(self, label_text="DASHBOARD - QUẢN LÝ LUỒNG CHẠY ĐA NHIỆM", label_font=("Arial", 13, "bold"), fg_color=HEADER_COLOR, corner_radius=15, border_width=1, border_color="#2C3440")
         self.table_scroll.grid(row=1, column=0, sticky="nsew", padx=20, pady=10)
         self.table_frame = self.table_scroll
-        for i in range(11): self.table_frame.grid_columnconfigure(i, weight=1)
-        headers = ["STT", "Web", "Profile", "User", "Pass", "Họ Tên", "SĐT", "Bank", "STK", "Trạng Thái", "Thao Tác"]
+        for i in range(13): self.table_frame.grid_columnconfigure(i, weight=1)
+        headers = ["STT", "Web", "Profile", "User", "Pass", "Họ Tên", "SĐT", "Bank", "STK", "PIN", "Email", "Trạng Thái", "Thao Tác"]
         for idx, h in enumerate(headers):
             ctk.CTkLabel(self.table_frame, text=h, font=("Arial", 11, "bold"), text_color="#ABB2B9", fg_color="#1C222D", height=35).grid(row=0, column=idx, padx=1, pady=5, sticky="ew")
 
@@ -109,6 +153,11 @@ class ToolApp(ctk.CTk):
         self.log_box.grid(row=3, column=0, sticky="ew", padx=20, pady=(0, 20))
         self.refresh_profiles()
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
+
+    def toggle_select_all(self):
+        val = self.var_all.get()
+        for var in self.sites_vars.values():
+            var.set(val)
 
     def write_log(self, msg):
         timestamp = time.strftime("[%H:%M:%S] ")
@@ -132,7 +181,8 @@ class ToolApp(ctk.CTk):
             "user": self.entry_user.get(), "pwd": self.entry_pass.get(),
             "name": self.entry_name.get(), "phone": self.entry_phone.get(),
             "bank": self.entry_bank.get(), "stk": self.entry_stk.get(),
-            "rut": self.entry_rut.get(), "sites": {k: v.get() for k, v in self.sites_vars.items()}
+            "rut": self.entry_rut.get(), "branch": self.entry_chinhanh.get(),
+            "email": self.entry_email.get(), "sites": {k: v.get() for k, v in self.sites_vars.items()}
         }
         try:
             with open(get_data_path("local_state.json"), "w", encoding="utf-8") as f: json.dump(state, f)
@@ -150,6 +200,8 @@ class ToolApp(ctk.CTk):
                 self.entry_bank.insert(0, state.get("bank", ""))
                 self.entry_stk.insert(0, state.get("stk", ""))
                 self.entry_rut.insert(0, state.get("rut", ""))
+                self.entry_chinhanh.insert(0, state.get("branch", ""))
+                self.entry_email.insert(0, state.get("email", ""))
                 saved_sites = state.get("sites", {})
                 for k, v in saved_sites.items():
                     if k in self.sites_vars: self.sites_vars[k].set(v)
@@ -185,7 +237,9 @@ class ToolApp(ctk.CTk):
                     task_data = {
                         "stt": str(self.task_count), "web": site, "user": data[0], "pwd": data[1],
                         "name": data[2], "phone": data[3], "bank": data[4], "stk": data[5],
-                        "rut": data[6], "port": port, "profile": p_name
+                        "rut": data[6], "branch": data[7] if len(data) >= 8 else "Hà Nội",
+                        "email": data[8] if len(data) >= 9 else "",
+                        "port": port, "profile": p_name
                     }
                     self._create_table_row(task_data)
             self.write_log("✅ Đã nhập danh sách từ file thành công.")
@@ -215,7 +269,9 @@ class ToolApp(ctk.CTk):
                 "stt": str(self.task_count), "web": site, "user": self.entry_user.get(), "pwd": self.entry_pass.get() or "123456",
                 "name": self.entry_name.get() or "Vô Danh", "phone": self.entry_phone.get() or "0900000000", 
                 "bank": self.entry_bank.get() or "MB", "stk": self.entry_stk.get() or "111222333", 
-                "rut": self.entry_rut.get() or "112233", "port": port, "profile": p_name
+                "rut": self.entry_rut.get() or "112233", "branch": self.entry_chinhanh.get() or "Hà Nội",
+                "email": self.entry_email.get() or "",
+                "port": port, "profile": p_name
             }
             self._create_table_row(task_data)
 
@@ -226,14 +282,14 @@ class ToolApp(ctk.CTk):
             entry.insert(0, str(text)); entry.configure(state="readonly")
             return entry
 
-        lbls = { 'stt': create_cell(task_data['stt']), 'web': create_cell(task_data['web'], color="#F39C12", weight="bold"), 'profile': create_cell(task_data.get('profile', 'N/A'), color="cyan"), 'user': create_cell(task_data['user']), 'pwd': create_cell(task_data['pwd']), 'name': create_cell(task_data['name']), 'phone': create_cell(task_data['phone']), 'bank': create_cell(task_data['bank']), 'stk': create_cell(task_data['stk']) }
-        cols = ['stt', 'web', 'profile', 'user', 'pwd', 'name', 'phone', 'bank', 'stk']
+        lbls = { 'stt': create_cell(task_data['stt']), 'web': create_cell(task_data['web'], color="#F39C12", weight="bold"), 'profile': create_cell(task_data.get('profile', 'N/A'), color="cyan"), 'user': create_cell(task_data['user']), 'pwd': create_cell(task_data['pwd']), 'name': create_cell(task_data['name']), 'phone': create_cell(task_data['phone']), 'bank': create_cell(task_data['bank']), 'stk': create_cell(task_data['stk']), 'rut': create_cell(task_data['rut'], color="#E74C3C"), 'email': create_cell(task_data.get('email', 'N/A')) }
+        cols = ['stt', 'web', 'profile', 'user', 'pwd', 'name', 'phone', 'bank', 'stk', 'rut', 'email']
         for col_idx, key in enumerate(cols): lbls[key].grid(row=row_idx, column=col_idx, padx=1, pady=3, sticky="ew")
         
         lbl_status = ctk.CTkLabel(self.table_frame, text="INITIALIZING...", text_color="yellow", font=("Arial", 11, "bold"))
-        lbl_status.grid(row=row_idx, column=9, padx=1, pady=3, sticky="ew")
+        lbl_status.grid(row=row_idx, column=11, padx=1, pady=3, sticky="ew")
         action_frame = ctk.CTkFrame(self.table_frame, fg_color="transparent")
-        action_frame.grid(row=row_idx, column=10, padx=1, pady=3)
+        action_frame.grid(row=row_idx, column=12, padx=1, pady=3)
 
         btn_pause = ctk.CTkButton(action_frame, text="⏸", width=30, height=25, fg_color="#F39C12")
         btn_pause.is_running = True 
@@ -280,7 +336,7 @@ class ToolApp(ctk.CTk):
                             context = await browser.new_context()
                             
                         page = await context.new_page()
-                        my_data = { "username": task_data['user'], "password": task_data['pwd'], "ten_that": task_data['name'], "sdt": task_data['phone'], "ten_bank": task_data['bank'], "stk_bank": task_data['stk'], "pin_bank": task_data['rut'] }
+                        my_data = { "username": task_data['user'], "password": task_data['pwd'], "ten_that": task_data['name'], "sdt": task_data['phone'], "ten_bank": task_data['bank'], "stk_bank": task_data['stk'], "pin_bank": task_data['rut'], "branch": task_data.get('branch', 'Hà Nội'), "email": task_data.get('email', '') }
                         def report_status(msg):
                             if not task_data.get('is_deleted', False): self.after(0, lambda: lbl_status.configure(text=msg.upper()))
                         def is_aborted(): return task_data.get('is_deleted', False)
@@ -295,7 +351,7 @@ class ToolApp(ctk.CTk):
         popup = ctk.CTkToplevel(self); popup.title(f"Edit {task_data['stt']}"); popup.geometry("380x520"); popup.configure(fg_color=HEADER_COLOR); popup.grab_set(); popup.attributes("-topmost", True)
         scroll = ctk.CTkScrollableFrame(popup, fg_color="transparent"); scroll.pack(fill="both", expand=True, padx=20, pady=20)
         entries = {}
-        fields = [("Username", "user"), ("Password", "pwd"), ("Họ Tên", "name"), ("SĐT", "phone"), ("Ngân hàng", "bank"), ("Số tài khoản", "stk"), ("Mật khẩu rút", "rut")]
+        fields = [("Username", "user"), ("Password", "pwd"), ("Họ Tên", "name"), ("SĐT", "phone"), ("Ngân hàng", "bank"), ("Số tài khoản", "stk"), ("Mật khẩu rút", "rut"), ("Chi nhánh", "branch"), ("Email", "email")]
         for label_text, key in fields:
             ctk.CTkLabel(scroll, text=f"{label_text}:", font=("Arial", 11, "bold"), text_color=ACCENT_COLOR).pack(anchor="w", pady=(10, 0))
             e = ctk.CTkEntry(scroll, width=300, fg_color="#1C222D", border_color="#34495E"); e.insert(0, str(task_data.get(key, ""))); e.pack(pady=2, anchor="w"); entries[key] = e

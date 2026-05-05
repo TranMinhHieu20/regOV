@@ -56,6 +56,9 @@ async def run_full_flow(page, target_url, user_data, cfg, report_status=None, is
                 print(f"📱 SĐT: Giữ nguyên {sdt_de_dien}")
             await page.type(cfg["input_phone"], sdt_de_dien)
 
+        if "input_email" in cfg:
+            await page.type(cfg["input_email"], user_data['email'])
+
         # ==========================================
         # BƯỚC: GIẢI CAPTCHA SỐ (TRƯỚC KHI BẤM ĐĂNG KÝ)
         # ==========================================
@@ -181,6 +184,11 @@ async def run_full_flow(page, target_url, user_data, cfg, report_status=None, is
             update_status("Cài đặt MK Rút Tiền...")
             print("\n--- BƯỚC 7: CÀI ĐẶT MẬT KHẨU RÚT TIỀN ---")
 
+            #7.2.kiểm tra 
+            selector_o_nhap_lai = cfg.get("o_nhap_lai_pass")
+
+            
+
            # 7.1. KIỂM TRA NÚT "CÀI ĐẶT" (Bản sửa lỗi đặc trị mạng lag)
             selector_cai_dat = cfg.get("nut_cai_dat")
             if selector_cai_dat:
@@ -213,7 +221,8 @@ async def run_full_flow(page, target_url, user_data, cfg, report_status=None, is
             cai_dat_mat_khau_thanh_cong = await cai_dat_mat_khau_rut_tien(
                 page, 
                 mat_khau=user_data['pin_bank'],
-                cfg=cfg # TRUYỀN CFG VÀO ĐÂY LÀ ĐỦ
+                cfg=cfg, # TRUYỀN CFG VÀO ĐÂY LÀ ĐỦ
+                pass_dang_ky=user_data.get('password') # Thêm cái này để lấy pass vừa tạo
             )
             
         await asyncio.sleep(1)
