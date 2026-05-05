@@ -19,6 +19,14 @@ async def run_full_flow(page, target_url, user_data, cfg, report_status=None, is
         update_status(f"Mở trang {target_url}...")
         print(f"🚀 Bắt đầu chạy: {target_url}")
         await page.goto(target_url, timeout=40000)
+        
+        # CHỐNG ĐÓNG BĂNG TAB: Đánh lừa trang web luôn ở trạng thái Visible để chạy ngầm
+        await page.add_init_script("""
+            Object.defineProperty(document, 'visibilityState', {value: 'visible', writable: true});
+            Object.defineProperty(document, 'hidden', {value: false, writable: true});
+            document.dispatchEvent(new Event('visibilitychange'));
+        """)
+        
         await page.wait_for_selector(cfg["input_username"], timeout=15000)
 
         # ==========================================
