@@ -455,19 +455,18 @@ WEB_CONFIG = {
             "button:has-text('Trang chủ')"],
         "nut_toi": "h3:text-is('Tài khoản')",
         "nut_rut_tien": "span:has-text('Rút tiền')",
-        "nut_cai_dat": "div:has-text('Rút tiền')",
+        "nut_rut_tien_2": "//div[contains(text(), 'Rút tiền') or ./span[contains(text(), 'Rút tiền')]]",
         "o_nhap_pass_rut": "#pin",
         "o_nhap_xac_nhan_pass_rut":"#confirmpin",
         "o_nhap_lai_pass": "#password",
         "nut_xacnhan_pass_rut": "button:has-text('Cập nhật')",
-
-        "input_stk": "input[formcontrolname='account']", 
-        "input_tim_ngan_hang": "mat-label:has-text('Vui lòng chọn ngân hàng')", # Đổi sang tìm ô Search
-        "input_ten_ngan_hang": "input[placeholder*='Vui lòng chọn ngân hàng']",
-        "item_ngan_hang": "mat-option",
-        "chi_nhanh": "input[formcontrolname='city']",
-        "nut_luu_ngan_hang": "button:has-text('Gửi đi')"
-        
+        "btn_dong":"button:has-text('Đóng')",
+        "input_stk": "#bankaccount", 
+        "input_tim_ngan_hang": "#bankid",
+        "input_ten_ngan_hang": "input[placeholder*='Nhập tên ngân hàng']",
+        "item_ngan_hang": "div.item-all",
+        "nhap_lai_pass": "#password",
+        "nut_luu_ngan_hang": "button:has-text('OK')"
     },
     "default": {
         "input_username": "input[type='text']",
