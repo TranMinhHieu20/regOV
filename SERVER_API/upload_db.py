@@ -194,17 +194,18 @@ WEB_CONFIG = {
             "button:has-text('Hủy')",
             ".bottom-btn.bottom-btn--cancel"],
         "nut_toi": "span:text-is('Tài Khoản')",
-        "nut_rut_tien": "span:text-is('Rút Tiền')",
-        "nut_cai_dat": "div.withdraw-bkdbtn",
-        "o_nhap_pass_rut": "input[formcontrolname='newPassword']",
-        "o_nhap_xac_nhan_pass_rut":"input[formcontrolname='confirm']",
-        "nut_xacnhan_pass_rut": "span:has-text('Gửi đi')",
-        "input_stk": "input[formcontrolname='account']", 
-        "input_tim_ngan_hang": "mat-label:has-text('Vui lòng chọn ngân hàng')", # Đổi sang tìm ô Search
-        "input_ten_ngan_hang": "input[placeholder*='Vui lòng chọn ngân hàng']",
-        "item_ngan_hang": "mat-option",
-        "chi_nhanh": "input[formcontrolname='city']",
-        "nut_luu_ngan_hang": "button:has-text('Gửi đi')"
+        "nut_rut_tien": "a:text-is('Rút Tiền')",
+        "nut_X": ".am-icon-entry_close_94e2c122, .entry-close, svg[class*='entry_close']",
+        "nut_cai_dat_1": ".withdraw-bkadd svg, .withdraw-bkadd",
+        "input_tim_ngan_hang": ".inputSelect", # Đổi sang tìm ô Search
+        "input_ten_ngan_hang": "input[placeholder*='Tìm kiếm']",
+        "item_ngan_hang": ".am-list-content",
+        "input_stk": "input[placeholder='＊ Vui lòng nhập số tài khoản']", 
+        "chi_nhanh": "input[placeholder='＊ Chi nhánh mở tài khoản']",
+        "pass_1":"input[placeholder='＊ Đặt mật khẩu rút tiền']",
+        "pass_2":"input[placeholder='＊ Nhập lại mật khẩu Rút tiền']",
+        "nut_luu_ngan_hang": ".btn-success, .am-button", # Nút Xác nhận ở form
+        "nut_xac_nhan_cuoi": "a:has-text('Xác nhận'), .am-modal-button:has-text('Xác nhận')" # Nút hiện ra sau đó
             
     },
     "m.new8826.xyz": {
@@ -464,7 +465,7 @@ WEB_CONFIG = {
         "input_stk": "#bankaccount", 
         "input_tim_ngan_hang": "#bankid",
         "input_ten_ngan_hang": "input[placeholder*='Nhập tên ngân hàng']",
-        "item_ngan_hang": "div.item-all",
+        "item_ngan_hang": ".item-all",
         "nhap_lai_pass": "#password",
         "nut_luu_ngan_hang": "button:has-text('OK')"
     },
