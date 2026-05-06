@@ -76,7 +76,7 @@ class ToolApp(ctk.CTk):
         self.entry_pass = create_input_group("PASSWORD", "Nhập mật khẩu", 0, 1)
         self.entry_name = create_input_group("HỌ TÊN THẬT", "Họ và tên", 0, 2)
         self.entry_phone = create_input_group("SỐ ĐIỆN THOẠI", "SĐT đăng ký", 0, 3)
-        self.entry_bank = create_input_group("NGÂN HÀNG", "Tên viết tắt", 1, 0)
+        self.entry_bank = create_input_group("NGÂN HÀNG", "MB, MBBANK, MBB...", 1, 0)
         self.entry_stk = create_input_group("SỐ TÀI KHOẢN", "STK nhận tiền", 1, 1)
         self.entry_rut = create_input_group("MẬT KHẨU RÚT", "PIN 6 số", 1, 2)
         self.entry_chinhanh = create_input_group("CHI NHÁNH", "CHI NHÁNH", 1, 3)

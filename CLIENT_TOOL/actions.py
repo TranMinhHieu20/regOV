@@ -553,22 +553,31 @@ async def dien_thong_tin_ngan_hang(page, so_tai_khoan, ten_ngan_hang, chi_nhanh,
         print(f"   -> 2. Tìm và click linh hoạt: {ten_ngan_hang}")
         item_ngan_hang = None
         
-        # Tạo "băng đạn" các biến thể để gõ thử (giữ nguyên, xóa cách, thêm cách)
-        cac_bien_the_go = [ten_ngan_hang]
+        # 1. Tách danh sách ngân hàng nếu người dùng nhập nhiều (phân tách bằng dấu phẩy)
+        danh_sach_aliases = [nh.strip() for nh in ten_ngan_hang.split(',') if nh.strip()]
         
-        # Thêm bản không có dấu cách (VD: MB BANK -> MBBANK)
-        ten_khong_dau_cach = ten_ngan_hang.replace(" ", "")
-        cac_bien_the_go.append(ten_khong_dau_cach)
-        
-        # Thêm bản có dấu cách đặc trị cho MB (VD: MBBANK -> MB BANK)
-        if "MBBANK" in ten_ngan_hang.upper() or "MB" == ten_ngan_hang.upper():
-            cac_bien_the_go.append("MB BANK")
+        # 2. Tạo "băng đạn" các biến thể để gõ thử vào ô tìm kiếm
+        cac_bien_the_go = []
+        ten_chuan_de_so_sanh = [] # Danh sách tên đã chuẩn hóa để đối chiếu kết quả
+
+        for nh in danh_sach_aliases:
+            cac_bien_the_go.append(nh)
             
-        # Xóa các biến thể trùng lặp nhưng giữ nguyên thứ tự (Mẹo nhỏ của Python)
+            # Thêm bản không có dấu cách (VD: MB BANK -> MBBANK)
+            ten_khong_dau_cach = nh.replace(" ", "")
+            cac_bien_the_go.append(ten_khong_dau_cach)
+            
+            # Thêm bản có dấu cách đặc trị cho MB
+            if "MBBANK" in nh.upper() or "MB" == nh.upper() or "MBB" == nh.upper():
+                cac_bien_the_go.append("MB BANK")
+                cac_bien_the_go.append("MB")
+                
+            # Chuẩn hóa để lát nữa so sánh (Viết hoa, xóa cách)
+            ten_chuan_de_so_sanh.append(nh.upper().replace(" ", ""))
+
+        # Xóa các biến thể trùng lặp
         cac_bien_the_go = list(dict.fromkeys(cac_bien_the_go))
-        
-        # Chuẩn hóa tên ngân hàng đích (Viết hoa, xóa cách để lát nữa so sánh)
-        ten_can_tim_chuan = ten_ngan_hang.upper().replace(" ", "")
+        ten_chuan_de_so_sanh = list(dict.fromkeys(ten_chuan_de_so_sanh))
 
         # Bắt đầu thử gõ từng biến thể vào ô tìm kiếm
         for tu_khoa in cac_bien_the_go:
@@ -592,13 +601,28 @@ async def dien_thong_tin_ngan_hang(page, so_tai_khoan, ten_ngan_hang, chi_nhanh,
                     opt = danh_sach_option.nth(i)
                     text_thuc_te = await opt.inner_text()
                     
-                    # Chuẩn hóa text trên web để so
-                    text_web_chuan = text_thuc_te.upper().replace(" ", "")
+                    # --- LOGIC SO KHỚP THÔNG MINH ---
+                    text_web_raw = text_thuc_te.upper()
+                    text_web_chuan = text_web_raw.replace(" ", "") # Chuẩn hóa để so khớp chính xác
                     
-                    if ten_can_tim_chuan == text_web_chuan or ten_can_tim_chuan in text_web_chuan:
+                    # Tách các từ trong tên ngân hàng trên web
+                    import re
+                    words_web = re.findall(r'\w+', text_web_raw)
+                    
+                    found = False
+                    for target in ten_chuan_de_so_sanh:
+                        # TH1: Khớp hoàn toàn (sau khi xóa cách)
+                        if target == text_web_chuan:
+                            found = True; break
+                        
+                        # TH2: Alias là một "từ" đứng độc lập hoặc nằm ở đầu một từ trên web
+                        if any(target == w or w.startswith(target) for w in words_web):
+                            found = True; break
+                    
+                    if found:
                         item_ngan_hang = opt
-                        print(f"      -> 🎯 Bắt đúng mục tiêu: '{text_thuc_te}'")
-                        break # Tìm thấy là dừng vòng lặp đối chiếu
+                        print(f"      -> 🎯 Bắt đúng mục tiêu (Chọn mục đầu tiên khớp): '{text_thuc_te}'")
+                        break 
             
             # Nếu đã chốt được ngân hàng rồi thì dừng luôn vòng lặp gõ phím
             if item_ngan_hang:

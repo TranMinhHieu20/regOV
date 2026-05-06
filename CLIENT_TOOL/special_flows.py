@@ -61,62 +61,6 @@ async def flow_rut_tien_3_o_dac_biet(page, cfg, user_data):
         print(f"❌ [Special Flow] Lỗi: {e}")
         return False
 
-# async def flow_nhap_bank_78win(page, cfg, user_data):
-#     try:
-#         print("\n🏦 [Special Flow] Bắt đầu điền thông tin Ngân hàng 78win...")
-
-#         # 1. Đóng Popup (nếu có nút Đóng riêng)
-#         btn_dong = cfg.get("btn_dong")
-#         if btn_dong:
-#             try:
-#                 print(f" -> Đang đóng popup: {btn_dong}")
-#                 await page.locator(btn_dong).first.click(timeout=3000)
-#                 await asyncio.sleep(1)
-#             except:
-#                 print(" -> Không thấy popup đóng, bỏ qua...")
-
-#         # 2. Nhập Số tài khoản
-#         if cfg.get("input_stk"):
-#             print(f" -> Nhập STK: {user_data['stk_bank']}")
-#             await page.locator(cfg.get("input_stk")).first.fill(str(user_data['stk_bank']))
-
-#         # 3. Nhập lại mật khẩu Game (Ô password xác nhận)
-#         if cfg.get("nhap_lai_pass"):
-#             print(f" -> Xác nhận lại mật khẩu Game...")
-#             await page.locator(cfg.get("nhap_lai_pass")).first.fill(str(user_data['password']))
-
-#         # 4. Chọn Ngân hàng (Quy trình: Click mở -> Search -> Chọn)
-#         if cfg.get("input_tim_ngan_hang"):
-#             print(f" -> Đang chọn Ngân hàng: {user_data['ten_bank']}")
-#             # Click vào ô chọn ngân hàng để hiện danh sách/ô search
-#             await page.locator(cfg.get("input_tim_ngan_hang")).first.click()
-#             await asyncio.sleep(1)
-            
-#             # Nếu có ô nhập tên để tìm kiếm
-#             if cfg.get("input_ten_ngan_hang"):
-#                 await page.locator(cfg.get("input_ten_ngan_hang")).first.fill(user_data['ten_bank'])
-#                 await asyncio.sleep(1)
-            
-#             # Chọn item ngân hàng hiện ra
-#             item_selector = cfg.get("item_ngan_hang")
-#             # Tìm item có chứa tên ngân hàng của mình
-#             target_item = page.locator(item_selector).filter(has_text=user_data['ten_bank']).first
-#             await target_item.click()
-#             await asyncio.sleep(1)
-
-#         # 5. Bấm OK/Lưu
-#         nut_luu = cfg.get("nut_luu_ngan_hang")
-#         if nut_luu:
-#             print(" 🚀 Bấm nút OK để hoàn tất...")
-#             await page.locator(nut_luu).first.click()
-#             await asyncio.sleep(3)
-
-#         print("✅ [Special Flow] Đã hoàn thành thêm Ngân hàng cho 78win!")
-#         return True
-#     except Exception as e:
-#         print(f"❌ [Special Flow Bank] Lỗi: {e}")
-#         return False
-
 async def flow_nhap_bank_78win(page, cfg, user_data):
     try:
         print("\n🏦 [Special Flow] Bắt đầu điền thông tin Ngân hàng 78win...")
@@ -152,33 +96,231 @@ async def flow_nhap_bank_78win(page, cfg, user_data):
 
         # 4. Chọn Ngân hàng (Dùng JS để kích hoạt vì #bankid thường bị readonly)
         if cfg.get("input_tim_ngan_hang"):
-            print(f" -> Đang mở danh sách ngân hàng...")
+            ten_ngan_hang = str(user_data['ten_bank'])
+            print(f" -> Đang mở danh sách ngân hàng để tìm: {ten_ngan_hang}...")
             selector_mo = cfg.get("input_tim_ngan_hang")
             
             # Ép click bằng JavaScript (Xuyên qua mọi rào cản readonly)
             await page.locator(selector_mo).first.evaluate("node => node.click()")
             await asyncio.sleep(1.5) # Đợi danh sách hiện
             
-            # Nhập tên tìm kiếm
+            # 1. Tách danh sách ngân hàng và tạo biến thể
+            danh_sach_aliases = [nh.strip() for nh in ten_ngan_hang.split(',') if nh.strip()]
+            cac_bien_the_go = []
+            ten_chuan_de_so = []
+            for nh in danh_sach_aliases:
+                cac_bien_the_go.append(nh)
+                cac_bien_the_go.append(nh.replace(" ", ""))
+                if "MB" in nh.upper():
+                    cac_bien_the_go.extend(["MB BANK", "MB"])
+                ten_chuan_de_so.append(nh.upper().replace(" ", ""))
+            
+            cac_bien_the_go = list(dict.fromkeys(cac_bien_the_go))
+            ten_chuan_de_so = list(dict.fromkeys(ten_chuan_de_so))
+
+            item_ngan_hang = None
+            item_selector = cfg.get("item_ngan_hang")
+
+            # 2. Thử gõ từng từ khóa vào ô tìm kiếm
             if cfg.get("input_ten_ngan_hang"):
                 search_box = page.locator(cfg.get("input_ten_ngan_hang")).first
                 await search_box.wait_for(state="visible", timeout=5000)
-                await search_box.fill(user_data['ten_bank'])
-                await asyncio.sleep(1)
-            
-            # Chọn Item
-            item_selector = cfg.get("item_ngan_hang")
-            await page.locator(item_selector).filter(has_text=user_data['ten_bank']).last.click()
-            await asyncio.sleep(0.5)
+                
+                for tu_khoa in cac_bien_the_go:
+                    print(f"    - Thử tìm: '{tu_khoa}'")
+                    await search_box.fill("") # Xóa cũ
+                    await search_box.type(tu_khoa, delay=50)
+                    await asyncio.sleep(1.2)
+                    
+                    # Lấy danh sách kết quả hiển thị
+                    options = page.locator(item_selector).filter(visible=True)
+                    count = await options.count()
+                    for i in range(count):
+                        opt = options.nth(i)
+                        text_raw = (await opt.inner_text()).upper()
+                        text_chuan = text_raw.replace(" ", "")
+                        
+                        import re
+                        words_web = re.findall(r'\w+', text_raw)
+                        
+                        found = False
+                        for t in ten_chuan_de_so:
+                            # So khớp chính xác hoặc khớp ở đầu mỗi từ
+                            if t == text_chuan or any(t == w or w.startswith(t) for w in words_web):
+                                found = True; break
+                        
+                        if found:
+                            item_ngan_hang = opt
+                            break
+                    if item_ngan_hang: break
+            else:
+                # Nếu không có ô search, tìm trực tiếp trong danh sách
+                options = page.locator(item_selector)
+                count = await options.count()
+                for i in range(count):
+                    opt = options.nth(i)
+                    text_raw = (await opt.inner_text()).upper()
+                    text_chuan = text_raw.replace(" ", "")
+                    
+                    import re
+                    words_web = re.findall(r'\w+', text_raw)
+                    
+                    found = False
+                    for t in ten_chuan_de_so:
+                        if t == text_chuan or any(t == w or w.startswith(t) for w in words_web):
+                            found = True; break
+                    
+                    if found:
+                        item_ngan_hang = opt
+                        break
+
+            # 3. Chốt hạ việc chọn Item
+            if item_ngan_hang:
+                # Dùng smart_click để đảm bảo bấm chính xác vào ngân hàng đã chọn
+                print(f"    🎯 Đã thấy ngân hàng, đang bấm chọn: {await item_ngan_hang.inner_text()}")
+                await smart_click(item_ngan_hang)
+                await asyncio.sleep(1.0)
+            else:
+                print(f"    ❌ Không tìm thấy ngân hàng nào khớp với '{ten_ngan_hang}'")
 
         # 5. Bấm OK/Lưu
         nut_luu = cfg.get("nut_luu_ngan_hang")
         if nut_luu:
-            print(" 🚀 Bấm nút OK...")
-            await page.locator(nut_luu).first.click()
+            print(" 🚀 Bấm nút OK để hoàn tất...")
+            # Sử dụng smart_click và đảm bảo nút đã hiện trong vùng nhìn thấy
+            target_ok = page.locator(nut_luu).first
+            await target_ok.scroll_into_view_if_needed()
+            await smart_click(target_ok)
             await asyncio.sleep(3)
 
         return True
     except Exception as e:
         print(f"❌ [Special Flow Bank] Lỗi: {e}")
         return False
+
+async def flow_full_qq88(page, cfg, user_data):
+    try:
+        print("\n🎯 [QQ88 Flow] Bắt đầu luồng thiết lập ngân hàng QQ88...")
+
+        # 0. BƯỚC DỌN ĐƯỜNG: Tắt nút X che màn hình
+        nut_x_selector = cfg.get("nut_X")
+        if nut_x_selector:
+            print(" -> Thực hiện dọn dẹp phần tử che khuất...")
+            # Truyền nut_x_selector vào hàm evaluate như một đối số để tránh lỗi cú pháp
+            await page.evaluate("""(selector) => {
+                const el = document.querySelector(selector);
+                if (el) {
+                    const wrapper = el.closest('.entry-count-wrapper') || el;
+                    wrapper.remove();
+                    return "Deleted";
+                }
+                return "Not found";
+            }""", nut_x_selector)
+            await asyncio.sleep(1)
+
+        # 1. Bấm nút cài đặt (Rút tiền/Thêm thẻ)
+        nut_cai_dat_selector = cfg.get("nut_cai_dat_1")
+        if nut_cai_dat_selector:
+            print(f" -> Đang bấm nút cài đặt: {nut_cai_dat_selector}")
+            # Dùng evaluate để chắc chắn bấm xuyên qua mọi lớp mờ còn sót lại
+            await smart_click(page.locator(nut_cai_dat_selector).first)
+            await asyncio.sleep(2)
+
+        # 2. Bấm vào ô chọn ngân hàng (.inputSelect)
+        input_select_selector = cfg.get("input_tim_ngan_hang")
+        if input_select_selector:
+            print(" -> Mở danh sách chọn ngân hàng...")
+            # Tiếp tục dùng JS Click cho chắc chắn
+            await smart_click(page.locator(input_select_selector).first)
+            await asyncio.sleep(1.5)
+
+        # 3. Tìm kiếm và chọn ngân hàng (Logic linh hoạt 3 kiểu: MBB, MB BANK...)
+        # ... (Giữ nguyên đoạn tìm kiếm linh hoạt mình đã viết ở trên) ...
+        ten_tu_gui = user_data.get('ten_bank', '')
+        danh_sach_ten = [t.strip() for t in ten_tu_gui.split(',')] if ',' in ten_tu_gui else [ten_tu_gui, "MBB", "MB BANK"]
+        
+        search_input = page.locator(cfg.get("input_ten_ngan_hang")).first
+        item_selector = cfg.get("item_ngan_hang")
+        
+        da_chon_bank = False
+        for ten in danh_sach_ten:
+            if da_chon_bank: break
+            print(f" 🔍 Thử tìm kiếm: {ten}")
+            await search_input.fill("")
+            await search_input.type(ten, delay=50)
+            await asyncio.sleep(1.2)
+            
+            # Tìm item khớp
+            items = page.locator(item_selector).filter(has_text=ten)
+            if await items.count() > 0:
+                print(f" ✅ Khớp {ten}, chọn luôn!")
+                await items.first.evaluate("node => node.click()")
+                da_chon_bank = True
+                await asyncio.sleep(1)
+        
+        # 4. Sau khi chọn Bank xong, nhập STK và Chi nhánh
+        # Lưu ý: Nên dùng fill() cho các ô input text bình thường
+        if cfg.get("input_stk"):
+            await page.locator(cfg.get("input_stk")).first.fill(str(user_data['stk_bank']))
+            
+        if cfg.get("chi_nhanh"):
+            await page.locator(cfg.get("chi_nhanh")).first.fill(user_data.get('branch', 'Hà Nội'))
+
+        # 5. Nhập Mã PIN rút tiền (2 ô)
+        if cfg.get("pass_1") and cfg.get("pass_2"):
+            # Ưu tiên lấy 'pin_rut_tien', nếu không có thì lấy 'pin' từ file dữ liệu của bạn
+            # Bạn hãy đảm bảo trong file Excel/JSON đầu vào có cột 'pin' hoặc 'pin_rut_tien'
+            ma_pin = user_data.get('pin_rut_tien') or user_data.get('pin') or "123456"
+            
+            print(f" -> Đang nhập mã PIN rút tiền: {ma_pin}")
+            
+            # Ô nhập 1
+            input_1 = page.locator(cfg.get("pass_1")).first
+            await input_1.fill("") # Xóa trống trước khi nhập
+            await input_1.type(str(ma_pin), delay=100) # Gõ từng số để web nhận diện
+            await asyncio.sleep(0.5)
+            
+            # Ô nhập 2
+            input_2 = page.locator(cfg.get("pass_2")).first
+            await input_2.fill("")
+            await input_2.type(str(ma_pin), delay=100)
+            await asyncio.sleep(0.5)
+
+        # --- BƯỚC 6: XÁC NHẬN LẦN 1 (Tại Form) ---
+        nut_1 = cfg.get("nut_luu_ngan_hang")
+        if nut_1:
+            print(" 🚀 Bấm Xác nhận lần 1...")
+            # Cuộn xuống để thấy nút
+            await page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+            btn1 = page.locator(nut_1).first
+            # Ép click bằng JS để đảm bảo nó kích hoạt popup tiếp theo
+            await btn1.evaluate("node => node.click()")
+            await asyncio.sleep(1.5) # Đợi Popup/Thẻ <a> hiện lên
+
+        # --- BƯỚC 7: XÁC NHẬN LẦN 2 (Thẻ <a> mới hiện lên) ---
+        nut_2 = cfg.get("nut_xac_nhan_cuoi")
+        if nut_2:
+            print(f" 🔍 Đang tìm thẻ xác nhận cuối cùng: {nut_2}")
+            btn2 = page.locator(nut_2).first
+            
+            try:
+                # Đợi thẻ <a> này xuất hiện (vì nó hiện sau khi bấm nút 1)
+                await btn2.wait_for(state="visible", timeout=5000)
+                
+                # Nếu là thẻ <a> dạng Popup, thường nó nằm giữa màn hình
+                # Không cần cuộn, bấm thẳng bằng JS
+                await btn2.evaluate("node => node.click()")
+                print(" ✅ Đã bấm xác nhận thẻ <a> thành công!")
+            except Exception as e:
+                print(f" ⚠️ Không thấy thẻ <a> hiện lên hoặc lỗi: {e}")
+                # Dự phòng: Thử nhấn phím Enter nếu nó là một Dialog của trình duyệt
+                await page.keyboard.press("Enter")
+
+        await asyncio.sleep(3) # Chờ kết quả cuối cùng
+        return True
+    except Exception as e:
+        print(f"❌ [QQ88 Flow] Lỗi: {e}")
+        return False
+
+# 3. Tìm kiếm và chọn ngân hàng (Logic linh hoạt: MBB, MB BANK...)
+        

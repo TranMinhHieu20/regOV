@@ -176,6 +176,15 @@ async def run_full_flow(page, target_url, user_data, cfg, report_status=None, is
             # Nghỉ 2s để nhìn thấy form Rút tiền hiện ra
             await asyncio.sleep(1)
         
+        # --- TRONG flows.py ---
+        current_url = page.url.lower()
+
+        if "qq88" in current_url:
+            from special_flows import flow_full_qq88
+            # Chạy toàn bộ luồng QQ88 và dừng lại
+            await flow_full_qq88(page, cfg, user_data)
+            return
+        
         # ==========================================
         # 7. CÀI ĐẶT MẬT KHẨU RÚT TIỀN (MỚI - ĐÃ NÂNG CẤP)
         # ==========================================
