@@ -184,46 +184,53 @@ async def run_full_flow(page, target_url, user_data, cfg, report_status=None, is
             update_status("Cài đặt MK Rút Tiền...")
             print("\n--- BƯỚC 7: CÀI ĐẶT MẬT KHẨU RÚT TIỀN ---")
 
-            #7.2.kiểm tra 
-            selector_o_nhap_lai = cfg.get("o_nhap_lai_pass")
-
+            # KIỂM TRA: Nếu có selector 'o_nhap_lai_pass', chạy luồng đặc biệt 3 ô
+            if cfg.get("o_nhap_lai_pass"):
+                from special_flows import flow_rut_tien_3_o_dac_biet
+                print("🛡️ Phát hiện Layout 3 ô - Chạy luồng từ special_flows.py...")
+                
+                # Gọi file mới bạn vừa tạo
+                cai_dat_mat_khau_thanh_cong = await flow_rut_tien_3_o_dac_biet(page, cfg, user_data)
+                
+                # Nếu chạy xong luồng đặc biệt này, bạn có thể cho nó tiếp tục hoặc dừng tùy ý
+                # Thường là return True nếu đây là bước cuối cùng bạn muốn thực hiện
+            else:
             
 
-           # 7.1. KIỂM TRA NÚT "CÀI ĐẶT" (Bản sửa lỗi đặc trị mạng lag)
-            selector_cai_dat = cfg.get("nut_cai_dat")
-            if selector_cai_dat:
-                try:
-                    # Tìm locator
-                    nut_cai_dat_locator = page.locator(selector_cai_dat).first
-                    
-                    # 1. Đợi nó xuất hiện trong cấu trúc code trước (bất kể ẩn hiện)
-                    await nut_cai_dat_locator.wait_for(state="attached", timeout=60000)
-                    
-                    # 2. Cuộn tới nó (giúp kích hoạt trạng thái visible trên nhiều web)
-                    await nut_cai_dat_locator.scroll_into_view_if_needed()
-                    
-                    # 3. Kiểm tra visible, nếu mạng quá lag mà không hiện thì dùng JS Click luôn
-                    if await nut_cai_dat_locator.is_visible(timeout=60000):
-                        print(f"   -> 🛠️ Bấm nút Cài đặt bằng smart_click...")
-                        await smart_click(nut_cai_dat_locator)
-                    else:
-                        print(f"   ⚠️ Nút chưa hiện nhưng đã có trong code, dùng JS Click cưỡng chế...")
-                        await nut_cai_dat_locator.evaluate("node => node.click()")
-                    
-                    # Đợi trang chuyển hướng
-                    await asyncio.sleep(2.5) 
-                    
-                except Exception as e:
-                    print(f"   ⚠️ Bỏ qua hoặc đã cài đặt: {e}")
-            # 7.2. GỌI HÀM ĐIỀN MẬT KHẨU
-            # Điểm khác biệt: Bây giờ ta truyền thẳng TẤT CẢ 'cfg' vào, 
-            # hàm bên actions.py sẽ tự biết bốc selector nào ra dùng.
-            cai_dat_mat_khau_thanh_cong = await cai_dat_mat_khau_rut_tien(
-                page, 
-                mat_khau=user_data['pin_bank'],
-                cfg=cfg, # TRUYỀN CFG VÀO ĐÂY LÀ ĐỦ
-                pass_dang_ky=user_data.get('password') # Thêm cái này để lấy pass vừa tạo
-            )
+            # 7.1. KIỂM TRA NÚT "CÀI ĐẶT" (Bản sửa lỗi đặc trị mạng lag)
+                selector_cai_dat = cfg.get("nut_cai_dat")
+                if selector_cai_dat:
+                    try:
+                        # Tìm locator
+                        nut_cai_dat_locator = page.locator(selector_cai_dat).first
+                        
+                        # 1. Đợi nó xuất hiện trong cấu trúc code trước (bất kể ẩn hiện)
+                        await nut_cai_dat_locator.wait_for(state="attached", timeout=60000)
+                        
+                        # 2. Cuộn tới nó (giúp kích hoạt trạng thái visible trên nhiều web)
+                        await nut_cai_dat_locator.scroll_into_view_if_needed()
+                        
+                        # 3. Kiểm tra visible, nếu mạng quá lag mà không hiện thì dùng JS Click luôn
+                        if await nut_cai_dat_locator.is_visible(timeout=60000):
+                            print(f"   -> 🛠️ Bấm nút Cài đặt bằng smart_click...")
+                            await smart_click(nut_cai_dat_locator)
+                        else:
+                            print(f"   ⚠️ Nút chưa hiện nhưng đã có trong code, dùng JS Click cưỡng chế...")
+                            await nut_cai_dat_locator.evaluate("node => node.click()")
+                        
+                        # Đợi trang chuyển hướng
+                        await asyncio.sleep(2.5) 
+                        
+                    except Exception as e:
+                        print(f"   ⚠️ Bỏ qua hoặc đã cài đặt: {e}")
+                # 7.2. GỌI HÀM ĐIỀN MẬT KHẨU
+                # Điểm khác biệt: Bây giờ ta truyền thẳng TẤT CẢ 'cfg' vào, 
+                # hàm bên actions.py sẽ tự biết bốc selector nào ra dùng.
+                cai_dat_mat_khau_thanh_cong = await cai_dat_mat_khau_rut_tien(
+                    page, 
+                    mat_khau=user_data['pin_bank'],
+                    cfg=cfg, # TRUYỀN CFG VÀO ĐÂY LÀ ĐỦ
+                )
             
         await asyncio.sleep(1)
 
@@ -315,13 +322,19 @@ async def run_full_flow(page, target_url, user_data, cfg, report_status=None, is
         if san_sang_dien_bank:
             update_status("Đang nhập STK Ngân Hàng...")
             print("\n--- BƯỚC 11: ĐIỀN FORM NGÂN HÀNG ---")
-            thanh_cong = await dien_thong_tin_ngan_hang(
-                page, 
-                so_tai_khoan=user_data['stk_bank'], 
-                ten_ngan_hang=user_data['ten_bank'], 
-                chi_nhanh=user_data.get('branch', 'Hà Nội'),
-                cfg=cfg
-            )
+
+            # KIỂM TRA: Nếu có ô 'nhap_lai_pass' trong phần bank thì chạy luồng special
+            if cfg.get("nhap_lai_pass"):
+                from special_flows import flow_nhap_bank_78win
+                thanh_cong = await flow_nhap_bank_78win(page, cfg, user_data)
+            else:
+                thanh_cong = await dien_thong_tin_ngan_hang(
+                    page, 
+                    so_tai_khoan=user_data['stk_bank'], 
+                    ten_ngan_hang=user_data['ten_bank'], 
+                    chi_nhanh=user_data.get('branch', 'Hà Nội'),
+                    cfg=cfg
+                )
             
             if thanh_cong:
                 print(f"✅ THÀNH CÔNG: Đã thêm thẻ {user_data['ten_bank']}!")

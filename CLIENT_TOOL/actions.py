@@ -282,7 +282,7 @@ async def bam_vao_rut_tien(page, selector_rut_tien):
 #         print(f"❌ Lỗi cài mật khẩu rút tiền: {e}")
 #         return False
 
-async def cai_dat_mat_khau_rut_tien(page, mat_khau, cfg, pass_dang_ky=None):
+async def cai_dat_mat_khau_rut_tien(page, mat_khau, cfg):
     selector_1 = cfg.get("o_nhap_pass_rut", 'ul.ui-password-input__security.hairline--surround')
     selector_2 = cfg.get("o_nhap_xac_nhan_pass_rut") 
     selector_nhap_lai = cfg.get("o_nhap_lai_pass")
@@ -323,37 +323,7 @@ async def cai_dat_mat_khau_rut_tien(page, mat_khau, cfg, pass_dang_ky=None):
         except Exception as e:
             print(f"      ❌ Lỗi khi nhập {label}: {e}")
             raise e
-    async def thuc_hien_nhap_lieu(target_box, noi_dung, label=""):
-        try:
-            await target_box.wait_for(state="visible", timeout=15000)
-            await target_box.scroll_into_view_if_needed()
-            await target_box.evaluate("node => node.focus()")
-            await asyncio.sleep(0.5)
-            
-            # Kiểm tra xem có bàn phím ảo không
-            ban_phim_ao = page.locator('.van-keypad, [class*="keyboard"], .number-board').filter(visible=True).first
-            
-            if await ban_phim_ao.is_visible(timeout=1000):
-                print(f" ⌨️ Gõ bàn phím ảo cho {label}...")
-                for so in noi_dung:
-                    await smart_click(ban_phim_ao.get_by_text(so, exact=True).first)
-                    await asyncio.sleep(0.2)
-            else:
-                print(f" ⌨️ Gõ phím thật vào {label}...")
-                await target_box.fill("") # Xóa cũ nếu có
-                await target_box.type(str(noi_dung), delay=100)
-                    
-            await asyncio.sleep(0.8)
-        except Exception as e:
-            print(f" ❌ Lỗi nhập {label}: {e}")
-
     try:
-
-        # --- BƯỚC MỚI: NHẬP LẠI MẬT KHẨU ĐĂNG KÝ (Chỉ chạy nếu trang web yêu cầu) ---
-        if selector_nhap_lai and pass_dang_ky:
-            print(" 🛡️ Phát hiện layout yêu cầu xác nhận mật khẩu đăng ký...")
-            o_xac_nhan_pass = page.locator(selector_nhap_lai).first
-            await thuc_hien_nhap_lieu(o_xac_nhan_pass, pass_dang_ky, "Mật khẩu đăng ký")
         # --- XỬ LÝ RIÊNG CHO HI144 ---
         if selector_2:
             print(" 🔄 Chế độ 2 ô selector riêng biệt (hi144)...")
