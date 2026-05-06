@@ -698,7 +698,7 @@ async def xu_ly_captcha(page, cfg):
         # 1. Tìm ô nhập và ÉP CỨNG FOCUS vào đó
         o_nhap = page.locator(input_selector).last
         await o_nhap.focus()
-        await asyncio.sleep(2) 
+        await asyncio.sleep(2.5) 
         
         # [QUAN TRỌNG] Bôi đen và xóa sạch dữ liệu cũ (đề phòng đây là lần retry thứ 2, thứ 3)
         await page.keyboard.press("Control+A")

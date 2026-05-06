@@ -62,40 +62,92 @@ async def run_full_flow(page, target_url, user_data, cfg, report_status=None, is
         # ==========================================
         # BƯỚC: GIẢI CAPTCHA SỐ (TRƯỚC KHI BẤM ĐĂNG KÝ)
         # ==========================================
+        # if cfg.get("input_captcha"):
+        #     update_status("Đang xử lý Captcha số...")
+        #     max_retries = 3
+        #     da_giai_xong = False
+                
+
+        #     for i in range(max_retries):
+        #         # Kiểm tra nếu người dùng bấm Dừng tool giữa chừng
+        #         if is_aborted and is_aborted(): return 
+
+        #         print(f"🔄 Thử giải Captcha lần {i+1}...")
+                
+        #         # Gọi hàm từ file actions mà chúng ta vừa nâng cấp
+        #         ket_qua = await xu_ly_captcha(page, cfg)
+                
+        #         if ket_qua is True:
+        #             print("✅ Captcha đã được điền xong!")
+        #             da_giai_xong = True
+        #             break # Thoát vòng lặp thử lại, chuyển sang bấm nút
+        #         else:
+        #             print(f"❌ Lần {i+1} lỗi (AI đọc sai hoặc web lag).")
+        #             if i < max_retries - 1:
+        #                 # Bấm đổi ảnh khác để thử lại cho chắc ăn
+        #                 try:
+        #                     print("      -> Đang đổi ảnh Captcha mới...")
+        #                     await page.locator(cfg.get("anh_captcha")).click()
+        #                     await asyncio.sleep(1.5) # Đợi ảnh mới load
+        #                 except:
+        #                     pass
+            
+        #     if not da_giai_xong:
+        #         print("🚨 Thử 3 lần đều thất bại. Dừng luồng để bảo vệ tài khoản!")
+        #         update_status("Lỗi: Không giải được Captcha số")
+        #         return False
+        
         if cfg.get("input_captcha"):
             update_status("Đang xử lý Captcha số...")
             max_retries = 3
             da_giai_xong = False
 
             for i in range(max_retries):
-                # Kiểm tra nếu người dùng bấm Dừng tool giữa chừng
+                # Kiểm tra nếu người dùng bấm Dừng tool
                 if is_aborted and is_aborted(): return 
 
                 print(f"🔄 Thử giải Captcha lần {i+1}...")
                 
-                # Gọi hàm từ file actions mà chúng ta vừa nâng cấp
+                # 1. Gọi hàm giải Captcha
                 ket_qua = await xu_ly_captcha(page, cfg)
                 
                 if ket_qua is True:
                     print("✅ Captcha đã được điền xong!")
                     da_giai_xong = True
-                    break # Thoát vòng lặp thử lại, chuyển sang bấm nút
+                    break 
                 else:
                     print(f"❌ Lần {i+1} lỗi (AI đọc sai hoặc web lag).")
+                    
                     if i < max_retries - 1:
-                        # Bấm đổi ảnh khác để thử lại cho chắc ăn
+                        # BƯỚC QUAN TRỌNG: Kiểm tra và bấm nút xác nhận lỗi nếu có
+                        xac_nhan_selector = cfg.get('xac_nhan')
+                        if xac_nhan_selector:
+                            try:
+                                # Đợi nút xác nhận lỗi hiện ra trong thời gian ngắn (ví dụ 2s)
+                                nut_confirm = page.locator(xac_nhan_selector).first
+                                if await nut_confirm.is_visible(timeout=2000):
+                                    print(" ⚠️ Phát hiện popup báo sai Captcha, đang bấm đóng...")
+                                    await nut_confirm.click()
+                                    await asyncio.sleep(0.5)
+                            except:
+                                # Nếu không thấy nút xác nhận thì thôi, bỏ qua để làm bước tiếp theo
+                                pass
+
+                        # 2. Đổi ảnh Captcha mới để thử lại
                         try:
                             print("      -> Đang đổi ảnh Captcha mới...")
-                            await page.locator(cfg.get("anh_captcha")).click()
-                            await asyncio.sleep(1.5) # Đợi ảnh mới load
+                            # Dùng evaluate click để chắc chắn đổi được ảnh
+                            await page.locator(cfg.get("anh_captcha")).first.evaluate("node => node.click()")
+                            await asyncio.sleep(1.5) 
                         except:
                             pass
             
             if not da_giai_xong:
-                print("🚨 Thử 3 lần đều thất bại. Dừng luồng để bảo vệ tài khoản!")
+                print("🚨 Thử 3 lần đều thất bại. Dừng luồng!")
                 update_status("Lỗi: Không giải được Captcha số")
                 return False
-            
+        
+
         # ==========================================
         # 2. GỌI HÀM BẤM NÚT ĐĂNG KÝ
         # ==========================================
