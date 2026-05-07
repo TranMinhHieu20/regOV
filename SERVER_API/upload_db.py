@@ -56,7 +56,7 @@ WEB_CONFIG = {
             "i[class*='close']",
             "span.web-push-tip-cancel",],
         "nut_toi": "span:text-is('Tôi')",
-        "nut_rut_tien": "p:text-is('Rút Tiền')",
+        "nut_rut_tien": "span:text-is('Rút Tiền'), p:text-is('Rút Tiền')",
         "o_nhap_pass_rut": ".ui-password-input__security.hairline--surround",
         "nut_xacnhan_pass_rut": "button:has-text('Xác Nhận')",
         "nut_them_tai_khoan": "span:text-is('Thêm Tài Khoản')",

@@ -67,7 +67,7 @@ def hash_password(password: str, salt: bytes = None) -> tuple:
     pwdhash = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt, 100000)
     return salt, pwdhash
 
-def register_user(username, email, password):
+def register_user(username, email, password, days=30):
     if not URI:
         return False, "Không tìm thấy MONGO_URI"
     try:
@@ -78,7 +78,13 @@ def register_user(username, email, password):
         if users_col.find_one({"username": username}):
             return False, "Username đã tồn tại!"
             
+        if users_col.find_one({"email": email}):
+            return False, "Email này đã được sử dụng!"
+            
         salt, pwdhash = hash_password(password)
+        
+        # Thiết lập ngày hết hạn
+        expiry_date = datetime.utcnow() + timedelta(days=days)
         
         user_data = {
             "username": username,
@@ -86,7 +92,8 @@ def register_user(username, email, password):
             "password_salt": binascii.hexlify(salt).decode('ascii'),
             "password_hash": binascii.hexlify(pwdhash).decode('ascii'),
             "session_token": "",
-            "status": "active" # Có thể đổi thành 'pending' nếu cần duyệt
+            "status": "active",
+            "expiry_date": expiry_date # Hạn sử dụng
         }
         
         users_col.insert_one(user_data)
@@ -107,7 +114,14 @@ def login_user(username, password):
             return False, "Sai tài khoản hoặc mật khẩu!", None
             
         if user.get("status") != "active":
-            return False, "Tài khoản đang bị khóa hoặc chưa kích hoạt!", None
+            return False, "Tài khoản đang bị khóa!", None
+            
+        # Kiểm tra Hạn Sử Dụng
+        expiry = user.get("expiry_date")
+        if expiry and datetime.utcnow() > expiry:
+            # Hết hạn -> Đổi status thành locked
+            users_col.update_one({"_id": user["_id"]}, {"$set": {"status": "locked", "session_token": ""}})
+            return False, "Tài khoản đã hết hạn sử dụng! Vui lòng liên hệ Admin gia hạn.", None
             
         # Kiểm tra mật khẩu
         salt = binascii.unhexlify(user["password_salt"].encode('ascii'))
@@ -134,7 +148,16 @@ def check_session(username, session_token):
         client = MongoClient(URI, serverSelectionTimeoutMS=3000)
         db = client["ToolAutoDB"]
         user = db["Users"].find_one({"username": username})
-        if user and user.get("session_token") == session_token and user.get("status") == "active":
+        
+        if not user: return False
+        
+        # Kiểm tra Hạn Sử Dụng trong session
+        expiry = user.get("expiry_date")
+        if expiry and datetime.utcnow() > expiry:
+            db["Users"].update_one({"_id": user["_id"]}, {"$set": {"status": "locked", "session_token": ""}})
+            return False
+
+        if user.get("session_token") == session_token and user.get("status") == "active":
             return True
         return False
     except:
