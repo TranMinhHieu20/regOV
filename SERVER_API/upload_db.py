@@ -547,9 +547,41 @@ WEB_CONFIG = {
         "nut_luu_ngan_hang": "span:has-text('Xác nhận')"
     },
     "default": {
-        "input_username": "input[type='text']",
-        "input_password": "input[type='password']",
-        "nut_dangky": "button"
+        "input_username": "input[formcontrolname='account']",
+        "input_password": "input[formcontrolname='password']",
+        "input_realName": "input[formcontrolname*='name']",
+        "input_phone": "input[formcontrolname*='mobile']",
+        "cat_so_0": False,
+        "nut_dangky": "span[translate='Register_Submit']",
+        "nut_dong_popup": [".ui-dialog-close-box__icon", 
+            ".ui-dialog-close",
+            ".close-icon", 
+            "[aria-label*='close' i]",
+            "i[class*='close']", 
+            "button:has-text('Đóng')",
+            "mat-dialog-container span:has-text('x')",
+            "mat-dialog-container span:has-text('X')",
+            "i.fa-times-circle",                 # Bắt thẳng vào cái icon chữ X
+            "button[ng-click*='$ctrl.ok']",      # Bắt vào sự kiện click tắt của Angular
+            ".modal-content button.btn-link",
+            "mat-dialog-container button:has-text('Đóng')",
+            "button[translate='Common_Closed']",
+            ".text-right.ng-star-inserted button",
+            "button.mt-4.rounded-\\[4px\\]",
+            "button:has-text('ĐÓNG')"
+            ],
+        "nut_toi": "span:text-is('TÀI KHỎAN')",
+        "nut_rut_tien": "a:has(span:has-text('Rút Tiền'))",
+        "nut_cai_dat": "a:has(span:has-text('Mật khẩu rút tiền chưa cài đặt, vui lòng cài đặt mật khẩu rút tiền trước (chọn vào đây để cài đặt)'))",
+        "o_nhap_pass_rut": "input[formcontrolname='newPassword']",
+        "o_nhap_xac_nhan_pass_rut":"input[formcontrolname='confirm']",
+        "nut_xacnhan_pass_rut": "span[translate='Account_Submit']",
+        "input_stk": "input[formcontrolname='account']", 
+        "input_tim_ngan_hang": "mat-label:has-text('Vui lòng chọn ngân hàng')", # Đổi sang tìm ô Search
+        "input_ten_ngan_hang": "input[placeholder*='Vui lòng chọn ngân hàng']",
+        "item_ngan_hang": "mat-option",
+        "chi_nhanh": "input[formcontrolname='city']",
+        "nut_luu_ngan_hang": "button:has-text('Gửi đi')"
     }
 }
 
