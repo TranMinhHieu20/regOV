@@ -159,7 +159,7 @@ async def run_full_flow(page, target_url, user_data, cfg, report_status=None, is
             
             if not da_giai_xong:
                 print("🚨 Thử 3 lần đều thất bại. Dừng luồng!")
-                update_status("Lỗi: Không giải được Captcha số")
+                update_status("LỖI: GIẢI CAPTCHA SỐ")
                 return False
         
 
@@ -180,7 +180,8 @@ async def run_full_flow(page, target_url, user_data, cfg, report_status=None, is
         
         if not thanh_cong:
             print("❌ Bấm Đăng ký thất bại.")
-            return
+            update_status("LỖI: BẤM NÚT ĐĂNG KÝ")
+            return False
         # 3. CHỐT CHẶN CAPTCHA (ĐÃ SỬA LOGIC)
         # ==========================================
         
@@ -210,7 +211,8 @@ async def run_full_flow(page, target_url, user_data, cfg, report_status=None, is
 
             if not da_thanh_cong:
                 print("🚨 Đã thử 3 lần nhưng không qua được Captcha. Dừng flow!")
-                return # Thoát ra nếu thử hết số lần mà vẫn lỗi
+                update_status("LỖI: GIẢI CAPTCHA KÉO")
+                return False
 
        # 3.2. Nếu là Captcha chờ thủ công (Trường hợp web có loại captcha lạ)
         # Sửa lại thành kiểm tra cờ 'captcha_thu_cong' thay vì 'input_captcha'
@@ -218,7 +220,8 @@ async def run_full_flow(page, target_url, user_data, cfg, report_status=None, is
             update_status("Phát hiện Captcha lạ. Đang chờ giải thủ công...")
             tiep_tuc = await kiem_tra_va_cho_captcha(page) 
             if not tiep_tuc:
-               return
+               update_status("LỖI: CAPTCHA THỦ CÔNG")
+               return False
         # ==========================================
         # 4. GỌI HÀM QUÉT POPUP
         # ==========================================
@@ -244,13 +247,15 @@ async def run_full_flow(page, target_url, user_data, cfg, report_status=None, is
         if "sasa2" in current_url:
             from special_flows import flow_nhap_bank_jun1
             # Chạy toàn bộ luồng QQ88 và dừng lại
-            await flow_nhap_bank_jun1(page, cfg, user_data)
-            return
+            thanh_cong = await flow_nhap_bank_jun1(page, cfg, user_data)
+            if not thanh_cong: update_status("LỖI: FORM BANK JUN1"); return False
+            return True
 
         if "jun888e" in current_url:
             from special_flows import flow_nhap_bank_moi
-            await flow_nhap_bank_moi(page, cfg, user_data)
-            return
+            thanh_cong = await flow_nhap_bank_moi(page, cfg, user_data)
+            if not thanh_cong: update_status("LỖI: FORM BANK JUN88"); return False
+            return True
 
         # ==========================================
         # 6. TỰ ĐỘNG BẤM "RÚT TIỀN" (MỚI THÊM)
@@ -267,8 +272,9 @@ async def run_full_flow(page, target_url, user_data, cfg, report_status=None, is
         if "qq88" in current_url:
             from special_flows import flow_full_qq88
             # Chạy toàn bộ luồng QQ88 và dừng lại
-            await flow_full_qq88(page, cfg, user_data)
-            return
+            thanh_cong = await flow_full_qq88(page, cfg, user_data)
+            if not thanh_cong: update_status("LỖI: FLOW QQ88"); return False
+            return True
         
         
         
@@ -435,11 +441,17 @@ async def run_full_flow(page, target_url, user_data, cfg, report_status=None, is
             if thanh_cong:
                 print(f"✅ THÀNH CÔNG: Đã thêm thẻ {user_data['ten_bank']}!")
                 return True
+            else:
+                update_status("LỖI: ĐIỀN FORM NGÂN HÀNG")
+                return False
 
         # ==========================================
         # KẾT THÚC LUỒNG
         # ==========================================
         print(f"🏆 HOÀN THÀNH TOÀN BỘ QUY TRÌNH CHO: {target_url}\n")
+        return True
         
     except Exception as e:
         print(f"❌ Lỗi tổng thể tại {target_url}: {e}")
+        update_status("LỖI: HỆ THỐNG")
+        return False

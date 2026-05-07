@@ -185,12 +185,16 @@ class ToolApp(ctk.CTk):
             "email": self.entry_email.get(), "sites": {k: v.get() for k, v in self.sites_vars.items()}
         }
         try:
-            with open(get_data_path("local_state.json"), "w", encoding="utf-8") as f: json.dump(state, f)
+            # Lưu file state riêng biệt cho từng tài khoản đăng nhập
+            filename = f"local_state_{self.username}.json"
+            with open(get_data_path(filename), "w", encoding="utf-8") as f: json.dump(state, f)
         except: pass
 
     def load_local_state(self):
         try:
-            state_path = get_data_path("local_state.json")
+            # Tải file state riêng biệt của tài khoản đang đăng nhập
+            filename = f"local_state_{self.username}.json"
+            state_path = get_data_path(filename)
             if os.path.exists(state_path):
                 with open(state_path, "r", encoding="utf-8") as f: state = json.load(f)
                 self.entry_user.insert(0, state.get("user", ""))
@@ -342,9 +346,15 @@ class ToolApp(ctk.CTk):
                         def report_status(msg):
                             if not task_data.get('is_deleted', False): self.after(0, lambda: lbl_status.configure(text=msg.upper()))
                         def is_aborted(): return task_data.get('is_deleted', False)
-                        await flows.run_full_flow(page, full_url, my_data, cfg, report_status, is_aborted)
-                        if not is_aborted(): self.after(0, lambda: lbl_status.configure(text="SUCCESS ✅", text_color=SUCCESS_COLOR))
-                except Exception as e: self.after(0, lambda: lbl_status.configure(text="ERROR ❌", text_color=DANGER_COLOR))
+                        is_success = await flows.run_full_flow(page, full_url, my_data, cfg, report_status, is_aborted)
+                        if not is_aborted(): 
+                            if is_success:
+                                self.after(0, lambda: lbl_status.configure(text="SUCCESS ✅", text_color=SUCCESS_COLOR))
+                            else:
+                                # flows.py đã báo lỗi chi tiết qua report_status rồi, ta chỉ đổi màu đỏ
+                                self.after(0, lambda: lbl_status.configure(text_color=DANGER_COLOR))
+                except Exception as e: 
+                    self.after(0, lambda: lbl_status.configure(text="LỖI: HỆ THỐNG ❌", text_color=DANGER_COLOR))
                 finally: self.after(0, lambda: btn_pause.configure(state="disabled"))
             loop = asyncio.new_event_loop(); asyncio.set_event_loop(loop); loop.run_until_complete(run_pw()); loop.close()
         threading.Thread(target=run_bot_thread, daemon=True).start()

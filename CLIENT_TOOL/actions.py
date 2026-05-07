@@ -401,92 +401,59 @@ async def dien_thong_tin_ngan_hang(page, so_tai_khoan, ten_ngan_hang, chi_nhanh,
 
         # --- MỚI: Đợi trang tải xong xuôi trước khi làm ---
         print("   -> Đang đợi trang form ngân hàng tải xong...")
-        await page.wait_for_load_state("networkidle", timeout=15000) # Đợi mạng lặng im
+        try:
+            # Dùng try-except để nếu mạng lag quá (chạy 13 luồng bị nghẽn mạng) thì bỏ qua, không bị sập nguyên luồng
+            await page.wait_for_load_state("networkidle", timeout=10000) 
+        except:
+            pass 
         await page.wait_for_load_state("domcontentloaded")
-        # ====================================================
-        # BƯỚC 1: XỬ LÝ NGÂN HÀNG (Mở menu -> Gõ -> Chọn)
-        # ====================================================
+        
         # ====================================================
         # BƯỚC 1: MỞ DANH SÁCH NGÂN HÀNG (Bản cưỡng chế)
         # ====================================================
         print(f"   -> 1. Đang tìm và mở danh sách ngân hàng...")
-
-        # 1. Đợi trang ổn định sau khi mạng lag
-        await page.wait_for_load_state("domcontentloaded")
         
-        # 2. Selector linh hoạt: Tìm cái nào THỰC SỰ đang hiện trên màn hình
-        # Thay vì chỉ dùng .last, ta filter(visible=True) để loại bỏ nút ẩn
         o_tim = page.locator(selector_tim_nh).filter(visible=True).first 
 
         try:
-            # Đợi dính vào code (attached) thay vì visible để tránh Timeout oan do lag
             await o_tim.wait_for(state="attached", timeout=15000)
             await o_tim.scroll_into_view_if_needed()
             
-            # 3. THỬ CLICK: Nếu smart_click không ăn sau 3s, dùng JS Click ép buộc
             try:
-                # Thử click bình thường trước
                 await o_tim.wait_for(state="visible", timeout=3000)
                 await smart_click(o_tim)
             except:
                 print("   ⚠️ Click thường thất bại/Timeout, dùng JS Click cưỡng chế...")
-                # Chiêu cuối: JS Click đâm xuyên qua mọi lớp phủ, mọi trạng thái ẩn
                 await o_tim.evaluate("node => node.click()")
 
-            # Đợi 1.5s để menu thực sự xòe ra
             await asyncio.sleep(1.5) 
-
         except Exception as e:
             print(f"   ❌ Lỗi nghiêm trọng không thể tác động vào ô ngân hàng: {e}")
             return False
-       # Gõ tên ngân hàng
-        if selector_nhap_ten_nh:
-            # Chế độ Dropdown 2 lớp (hi144)
-            print("      -> Bắt được ô nhập bên trong Dropdown, đang gõ tên...")
-            o_nhap = page.locator(selector_nhap_ten_nh).filter(visible=True).first
-            
-            # --- ĐOẠN NÀY ĐÃ ĐƯỢC SỬA ĐỂ VƯỢT RÀO DISABLED ---
-            await o_nhap.evaluate("node => node.focus()") # Dùng JS ép Focus để vượt mặt Playwright
-            await o_nhap.fill("", force=True)             # Thêm force=True để cưỡng chế xóa trắng
-            await page.keyboard.type(ten_ngan_hang, delay=100)
-            # --------------------------------------------------
-            
-        else:
-            # Chế độ Input bình thường (c168)
-            print("      -> Chế độ Input thường, đang gõ tên...")
-            await o_tim.focus()
-            await o_tim.fill("")
-            await page.keyboard.type(ten_ngan_hang, delay=100)
-            
-        await asyncio.sleep(2.0) # Đợi web lọc danh sách kết quả
 
-       # Bấm chọn Ngân hàng
+        # Xác định chính xác ô cần gõ (hi144 có ô riêng, c168 dùng chung ô tìm)
+        if selector_nhap_ten_nh:
+            target_input = page.locator(selector_nhap_ten_nh).filter(visible=True).first
+        else:
+            target_input = o_tim
+            
         print(f"   -> 2. Tìm và click linh hoạt: {ten_ngan_hang}")
         item_ngan_hang = None
         
-        # 1. Tách danh sách ngân hàng nếu người dùng nhập nhiều (phân tách bằng dấu phẩy)
+        # Tách danh sách ngân hàng
         danh_sach_aliases = [nh.strip() for nh in ten_ngan_hang.split(',') if nh.strip()]
-        
-        # 2. Tạo "băng đạn" các biến thể để gõ thử vào ô tìm kiếm
         cac_bien_the_go = []
-        ten_chuan_de_so_sanh = [] # Danh sách tên đã chuẩn hóa để đối chiếu kết quả
+        ten_chuan_de_so_sanh = []
 
         for nh in danh_sach_aliases:
             cac_bien_the_go.append(nh)
-            
-            # Thêm bản không có dấu cách (VD: MB BANK -> MBBANK)
             ten_khong_dau_cach = nh.replace(" ", "")
             cac_bien_the_go.append(ten_khong_dau_cach)
-            
-            # Thêm bản có dấu cách đặc trị cho MB
             if "MBBANK" in nh.upper() or "MB" == nh.upper() or "MBB" == nh.upper():
                 cac_bien_the_go.append("MB BANK")
                 cac_bien_the_go.append("MB")
-                
-            # Chuẩn hóa để lát nữa so sánh (Viết hoa, xóa cách)
             ten_chuan_de_so_sanh.append(nh.upper().replace(" ", ""))
 
-        # Xóa các biến thể trùng lặp
         cac_bien_the_go = list(dict.fromkeys(cac_bien_the_go))
         ten_chuan_de_so_sanh = list(dict.fromkeys(ten_chuan_de_so_sanh))
 
@@ -494,12 +461,17 @@ async def dien_thong_tin_ngan_hang(page, so_tai_khoan, ten_ngan_hang, chi_nhanh,
         for tu_khoa in cac_bien_the_go:
             print(f"      -> Đang thử gõ từ khóa: '{tu_khoa}'")
             
-            # Bôi đen và xóa sạch ô tìm kiếm (chuẩn bị cho lần gõ)
-            await page.keyboard.press("Control+A")
-            await page.keyboard.press("Backspace")
-            
-            # Gõ từ khóa vào
-            await page.keyboard.type(tu_khoa, delay=100)
+            # Ép focus và gõ trực tiếp vào ô mục tiêu, chống mất focus khi đa luồng
+            try:
+                await target_input.evaluate("node => node.focus()")
+                await target_input.fill("", force=True)
+                await target_input.type(tu_khoa, delay=50)
+            except:
+                # Fallback nếu evaluate lỗi
+                await target_input.focus()
+                await target_input.fill("")
+                await page.keyboard.type(tu_khoa, delay=50)
+                
             await asyncio.sleep(1.5) # Đợi 1.5s cho web load xong danh sách
             
             # Lấy các kết quả ĐANG HIỂN THỊ
