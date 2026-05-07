@@ -8,6 +8,7 @@ async def run_full_flow(page, target_url, user_data, cfg, report_status=None, is
             report_status(msg)
             
     try:
+       
         if is_aborted and is_aborted(): return
         
         # Khởi tạo các biến trạng thái để tránh lỗi "not defined"
@@ -19,11 +20,25 @@ async def run_full_flow(page, target_url, user_data, cfg, report_status=None, is
         update_status(f"Mở trang {target_url}...")
         print(f"🚀 Bắt đầu chạy: {target_url}")
         await page.goto(target_url, timeout=40000)
-        
-        # CHỐNG ĐÓNG BĂNG TAB: Đánh lừa trang web luôn ở trạng thái Visible để chạy ngầm
+        current_url = page.url.lower()
+        print("==================", current_url)
+        # CHỐNG ĐÓNG BĂNG TAB: Đánh lừa trang web luôn ở trạng thái Visible và ngăn chặn throttling
         await page.add_init_script("""
+            // 1. Đánh lừa trạng thái hiển thị
             Object.defineProperty(document, 'visibilityState', {value: 'visible', writable: true});
             Object.defineProperty(document, 'hidden', {value: false, writable: true});
+            
+            // 2. Ngăn chặn trình duyệt "ru ngủ" các hàm thời gian khi tab chạy ngầm
+            const originalSetTimeout = window.setTimeout;
+            window.setTimeout = function(fn, delay) {
+                return originalSetTimeout(fn, Math.min(delay, 1000)); 
+            };
+            
+            // 3. Giữ cho các vòng lặp animation luôn chạy
+            window.requestAnimationFrame = function(callback) {
+                return window.setTimeout(() => callback(performance.now()), 16);
+            };
+
             document.dispatchEvent(new Event('visibilitychange'));
         """)
         
@@ -40,11 +55,11 @@ async def run_full_flow(page, target_url, user_data, cfg, report_status=None, is
         # ==========================================
         if is_aborted and is_aborted(): return
         update_status("Đang nhập thông tin Đăng ký...")
-        await page.type(cfg["input_username"], user_data["username"])
-        await page.type(cfg["input_password"], user_data["password"])
+        await page.type(cfg["input_username"], user_data["username"], delay=10)
+        await page.type(cfg["input_password"], user_data["password"], delay=10)
         
         if "input_realName" in cfg:
-            await page.type(cfg["input_realName"], user_data["ten_that"])
+            await page.type(cfg["input_realName"], user_data["ten_that"], delay=10)
 
         if "input_phone" in cfg:
             sdt_goc = user_data["sdt"]
@@ -54,10 +69,10 @@ async def run_full_flow(page, target_url, user_data, cfg, report_status=None, is
             else:
                 sdt_de_dien = sdt_goc
                 print(f"📱 SĐT: Giữ nguyên {sdt_de_dien}")
-            await page.type(cfg["input_phone"], sdt_de_dien)
+            await page.type(cfg["input_phone"], sdt_de_dien, delay=10)
 
         if "input_email" in cfg:
-            await page.type(cfg["input_email"], user_data['email'])
+            await page.type(cfg["input_email"], user_data['email'], delay=10)
 
         # ==========================================
         # BƯỚC: GIẢI CAPTCHA SỐ (TRƯỚC KHI BẤM ĐĂNG KÝ)
@@ -154,12 +169,18 @@ async def run_full_flow(page, target_url, user_data, cfg, report_status=None, is
         if is_aborted and is_aborted(): return
         update_status("Chuẩn bị bấm Đăng ký...")
         print("\n--- BẮT ĐẦU QUÁ TRÌNH BẤM ĐĂNG KÝ ---")
-        thanh_cong = await bam_nut_dang_ky(page, cfg["nut_dangky"])
 
+        if "jun888e" in current_url:
+            print("⏳ Phát hiện junv2: Đang đợi 5 giây trước khi bấm Đăng ký...")
+            await asyncio.sleep(5)  # Đợi đúng 5 giây cho junv2
+            thanh_cong = await bam_nut_dang_ky(page, cfg["nut_dangky"])
+        else:
+            # Các trang khác bấm luôn không cần đợi
+            thanh_cong = await bam_nut_dang_ky(page, cfg["nut_dangky"])
         
         if not thanh_cong:
-            return 
-            
+            print("❌ Bấm Đăng ký thất bại.")
+            return
         # 3. CHỐT CHẶN CAPTCHA (ĐÃ SỬA LOGIC)
         # ==========================================
         
@@ -216,7 +237,20 @@ async def run_full_flow(page, target_url, user_data, cfg, report_status=None, is
         # Truyền cấu hình từ cfg vào hàm
         vao_toi_thanh_cong = await bam_vao_tab_toi(page, cfg.get("nut_toi"))
         await asyncio.sleep(1)
-        
+
+        # --- TRONG flows.py ---
+      
+       
+        if "sasa2" in current_url:
+            from special_flows import flow_nhap_bank_jun1
+            # Chạy toàn bộ luồng QQ88 và dừng lại
+            await flow_nhap_bank_jun1(page, cfg, user_data)
+            return
+
+        if "jun888e" in current_url:
+            from special_flows import flow_nhap_bank_moi
+            await flow_nhap_bank_moi(page, cfg, user_data)
+            return
 
         # ==========================================
         # 6. TỰ ĐỘNG BẤM "RÚT TIỀN" (MỚI THÊM)
@@ -228,14 +262,15 @@ async def run_full_flow(page, target_url, user_data, cfg, report_status=None, is
             # Nghỉ 2s để nhìn thấy form Rút tiền hiện ra
             await asyncio.sleep(1)
         
-        # --- TRONG flows.py ---
-        current_url = page.url.lower()
+
 
         if "qq88" in current_url:
             from special_flows import flow_full_qq88
             # Chạy toàn bộ luồng QQ88 và dừng lại
             await flow_full_qq88(page, cfg, user_data)
             return
+        
+        
         
         # ==========================================
         # 7. CÀI ĐẶT MẬT KHẨU RÚT TIỀN (MỚI - ĐÃ NÂNG CẤP)

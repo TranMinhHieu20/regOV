@@ -192,95 +192,6 @@ async def bam_vao_rut_tien(page, selector_rut_tien):
     except Exception as e:
         print(f"❌ Không click được nút 'Rút Tiền'. Lỗi: {e}")
         return False
-    
-# --- TRONG FILE: actions.py ---
-
-# async def cai_dat_mat_khau_rut_tien(page, mat_khau, cfg):
-#     # Lấy selector từ DB, nếu không có thì dùng mặc định của c168
-#     selector_1 = cfg.get("o_nhap_pass_rut", 'ul.ui-password-input__security.hairline--surround')
-#     selector_2 = cfg.get("o_nhap_xac_nhan_pass_rut") # hi144 sẽ có cái này, c168 là None
-#     selector_xac_nhan = cfg.get("nut_xacnhan_pass_rut", "button:has-text('Xác Nhận')")
-
-#     print(f"🔐 Đang thiết lập mật khẩu rút tiền: {mat_khau}")
-    
-#     # --- HÀM CON: Dùng để nhập pass vào 1 ô bất kỳ (Bản Nâng Cấp Chống Trượt) ---
-#     # --- HÀM CON: Dùng để nhập pass vào 1 ô bất kỳ (Full Smart Click) ---
-#     async def thuc_hien_nhap_mat_khau(target_box):
-#         await target_box.wait_for(state="visible", timeout=5000)
-        
-#         # 1. Gọi bàn phím ảo lên bằng smart_click
-#         print("   -> Gọi bàn phím ảo...")
-#         await smart_click(target_box) 
-        
-#         # Đợi 1.5s để bàn phím trồi lên xong hẳn
-#         await asyncio.sleep(1.5) 
-        
-#         ban_phim_ao = page.locator('.van-keypad, [class*="keyboard"], [class*="keypad"], .number-board').filter(visible=True).first
-        
-#         if await ban_phim_ao.is_visible(timeout=1000):
-#             print("   ⌨️ Bàn phím ảo đã lên, đang gõ số...")
-#             for so in mat_khau:
-#                 nut_so = ban_phim_ao.get_by_text(so, exact=True).first
-                
-#                 # 2. Dùng smart_click gõ từng số
-#                 await smart_click(nut_so) 
-                
-#                 # Giữ delay 0.3s để web kịp nhận diện từng nhịp nhấn
-#                 await asyncio.sleep(0.3) 
-#         else:
-#             print("   ⌨️ Không thấy bàn phím ảo, dùng phím thật...")
-#             # Dùng phím tắt để xóa an toàn
-#             # await page.keyboard.press("Control+A")
-#             # await page.keyboard.press("Backspace")
-#             # await asyncio.sleep(0.2)
-            
-#             for char in mat_khau:
-#                 await page.keyboard.press(char)
-#                 await asyncio.sleep(0.15)
-                
-#         await asyncio.sleep(1.0) 
-#     # --------------------------------------------------------------------------------------
-
-#     try:
-#         # TRƯỜNG HỢP 1: TRANG CÓ 2 Ô RIÊNG BIỆT (như hi144)
-#         if selector_2:
-#             print(" 🔄 Chế độ 2 ô selector riêng biệt (hi144)...")
-#             # Nhập ô 1
-#             print("   -> Đang nhập ô Mật Khẩu...")
-#             await thuc_hien_nhap_mat_khau(page.locator(selector_1).first)
-            
-#             # Nhập ô 2
-#             print("   -> Đang nhập ô Xác Nhận...")
-#             await thuc_hien_nhap_mat_khau(page.locator(selector_2).first)
-
-#         # TRƯỜNG HỢP 2: TRANG DÙNG 1 SELECTOR CHUNG CHO NHIỀU Ô (như c168)
-#         else:
-#             print(" 🔄 Chế độ 1 selector chung (c168/f168)...")
-#             pass_boxes = page.locator(selector_1)
-#             await pass_boxes.first.wait_for(state="visible", timeout=10000)
-#             count_boxes = await pass_boxes.count()
-            
-#             for i in range(count_boxes):
-#                 print(f"   -> Đang nhập hàng mật khẩu thứ {i+1}...")
-#                 await thuc_hien_nhap_mat_khau(pass_boxes.nth(i))
-
-#         # --- BẤM XÁC NHẬN ---
-#         if selector_xac_nhan:
-#             print(" -> Bấm nút Xác Nhận / Lưu...")
-#             nut_xn = page.locator(selector_xac_nhan).first
-            
-#             # Dùng duy nhất 1 dòng smart_click này thôi:
-#             await smart_click(nut_xn)
-            
-#             # Tăng thời gian chờ lên 4-5s để web kịp tắt popup "Thành công" 
-#             # tránh chặn bước điền ngân hàng tiếp theo.
-#             await asyncio.sleep(2.0)
-            
-#         return True
-
-#     except Exception as e:
-#         print(f"❌ Lỗi cài mật khẩu rút tiền: {e}")
-#         return False
 
 async def cai_dat_mat_khau_rut_tien(page, mat_khau, cfg):
     selector_1 = cfg.get("o_nhap_pass_rut", 'ul.ui-password-input__security.hairline--surround')
@@ -738,66 +649,6 @@ async def xu_ly_captcha(page, cfg):
         print(f"❌ Lỗi khi xử lý captcha: {e}")
         return False # BÁO LỖI ĐỂ CHẠY LẠI
 
-# async def xu_ly_captcha(page, cfg):
-#     anh_selector = cfg.get("anh_captcha")
-#     input_selector = cfg.get("input_captcha")
-    
-#     if not (anh_selector and input_selector):
-#         return True
-
-#     print("🔍 Bắt đầu xử lý Captcha số...")
-#     try:
-#         # 1. TÌM Ô NHẬP & CHUẨN BỊ
-#         o_nhap = page.locator(input_selector).last
-#         await o_nhap.scroll_into_view_if_needed()
-#         await o_nhap.click() # Click vào để kích hoạt focus
-        
-#         # Xóa dữ liệu cũ
-#         await page.keyboard.press("Control+A")
-#         await page.keyboard.press("Backspace")
-
-#         # 2. ĐỢI ẢNH HIỆN HÌNH (THAY ĐỔI QUAN TRỌNG TẠI ĐÂY)
-#         anh_element = page.locator(anh_selector).last
-        
-#         # Thay vì đợi 1.5s mù quáng, ta đợi cho đến khi nó THỰC SỰ xuất hiện trên màn hình
-#         try:
-#             await anh_element.wait_for(state="visible", timeout=5000)
-#             # Thêm 1 nhịp nghỉ ngắn 1s để chắc chắn nội dung ảnh đã render xong (chống chụp ra ảnh trắng)
-#             await asyncio.sleep(1) 
-#         except:
-#             print("❌ Quá 5s mà không thấy ảnh Captcha hiện ra!")
-#             return False
-
-#         # 3. CHỤP ẢNH & GIẢI MÃ
-#         # Tip: Đôi khi ảnh bị cache cũ, ta có thể click vào ảnh để lấy ảnh mới nếu cần
-#         # await anh_element.click() 
-#         # await asyncio.sleep(1)
-
-#         image_bytes = await anh_element.screenshot()
-        
-#         with ocr_lock:
-#             text_captcha = ocr.classification(image_bytes)
-            
-#         if not text_captcha:
-#             print("❌ AI không đọc được, đang click đổi ảnh khác...")
-#             await anh_element.click() # Click vào ảnh để web đổi mã mới
-#             return False 
-            
-#         print(f"🤖 Captcha: {text_captcha}")
-        
-#         # 4. NHẬP TỪNG CHỮ (MÔ PHỎNG NGƯỜI THẬT)
-#         # Không dùng .type vì nó quá nhanh, dùng keyboard.type với delay
-#         await o_nhap.focus()
-#         for char in text_captcha:
-#             await page.keyboard.type(char, delay=random.randint(150, 300))
-            
-#         print("✅ Đã nhập xong Captcha!")
-#         return True 
-        
-#     except Exception as e:
-#         print(f"❌ Lỗi: {e}")
-#         return False
-
 import cv2
 import numpy as np
 import random
@@ -856,12 +707,10 @@ async def giai_captcha_keo_opencv(page, cfg):
         # 1. Chờ khung captcha xuất hiện
         bg_selector = cfg["captcha_bg_img"]
         slice_selector = cfg["captcha_slice_img"]
-        bg_locator = page.locator(bg_selector)
+        bg_locator = page.locator(bg_selector).first
         
         await bg_locator.wait_for(state="visible", timeout=10000)
 
-        # 2. Đợi ảnh load hoàn toàn
-        await asyncio.sleep(2.5) 
 
         # 3. Chụp ảnh (Dùng file riêng cho luồng này)
         print(f"📸 [Luồng {id_luong}] Đang chụp ảnh Captcha...")
@@ -888,7 +737,7 @@ async def giai_captcha_keo_opencv(page, cfg):
         print(f"📏 Độ lệch chuẩn: {gap_x_raw} | Distance cần kéo: {distance:.2f}px")
 
         # 5. Lấy tọa độ nút kéo
-        slider_locator = page.locator(cfg["captcha_slider_btn"])
+        slider_locator = page.locator(cfg["captcha_slider_btn"]).first
         box = await slider_locator.bounding_box()
         if not box:
             return False

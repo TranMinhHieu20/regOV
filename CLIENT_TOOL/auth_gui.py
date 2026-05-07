@@ -25,10 +25,10 @@ class AuthApp(ctk.CTk):
         self.tabview.pack(pady=20, padx=20)
         
         self.tab_login = self.tabview.add("Đăng Nhập")
-        self.tab_register = self.tabview.add("Đăng Ký")
+        # self.tab_register = self.tabview.add("Đăng Ký")
         
         self.setup_login_tab()
-        self.setup_register_tab()
+        # self.setup_register_tab()
 
     def setup_login_tab(self):
         ctk.CTkLabel(self.tab_login, text="ĐĂNG NHẬP HỆ THỐNG", font=("Arial", 20, "bold")).pack(pady=(20, 30))

@@ -29,8 +29,8 @@ DOMAIN_MAP = {
     "u888": "https://m.u8889.ink/Account/Register",
     "789bet": "https://m.vip789betj.com/Account/Register",
     "78win": "https://www.78wina1.ltd/signup",
-    "junv1":"",
-    "junv2":""
+    "junv1":"https://sasa2.xn--8866-um1g.com/signup",
+    "junv2":"https://www.jun888e.ren/vi-vn/register"
 }
 
 # --- PREMIUM COLORS ---
@@ -321,19 +321,21 @@ class ToolApp(ctk.CTk):
                     async with async_playwright() as p:
                         browser = await p.chromium.connect_over_cdp(ws_url)
                         
-                        # Sử dụng context mặc định đang có sẵn để chạy chung 1 cửa sổ (nhiều Tab)
+                        # Khởi tạo Context với các cài đặt tàng hình nâng cao
                         if browser.contexts:
                             context = browser.contexts[0]
-                            await context.add_init_script("""
-                                Object.defineProperty(navigator, 'webdriver', {get: () => undefined});
-                                window.Element.prototype._addEventListener = window.Element.prototype.addEventListener;
-                                window.Element.prototype.addEventListener = function(a,b,c) {
-                                    if(a==='beforeunload') return;
-                                    this._addEventListener(a,b,c);
-                                };
-                            """)
                         else:
-                            context = await browser.new_context()
+                            context = await browser.new_context(
+                                viewport={'width': 1280, 'height': 720},
+                                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+                            )
+                        
+                        # Áp dụng Stealth Script cho toàn bộ Context
+                        await context.add_init_script("""
+                            Object.defineProperty(navigator, 'webdriver', {get: () => undefined});
+                            window.chrome = { runtime: {} };
+                            Object.defineProperty(navigator, 'languages', {get: () => ['vi-VN', 'vi', 'en-US', 'en']});
+                        """)
                             
                         page = await context.new_page()
                         my_data = { "username": task_data['user'], "password": task_data['pwd'], "ten_that": task_data['name'], "sdt": task_data['phone'], "ten_bank": task_data['bank'], "stk_bank": task_data['stk'], "pin_bank": task_data['rut'], "branch": task_data.get('branch', 'Hà Nội'), "email": task_data.get('email', '') }
